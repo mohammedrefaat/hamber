@@ -1,4 +1,4 @@
-module github.com/mohammedrefaat/humber
+module github.com/mohammedrefaat/hamber
 
 go 1.23
 

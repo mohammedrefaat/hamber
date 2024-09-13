@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	config "github.com/mohammedrefaat/humber/Config"
-	db "github.com/mohammedrefaat/humber/Db"
-	"github.com/mohammedrefaat/humber/stores"
+	config "github.com/mohammedrefaat/hamber/Config"
+	db "github.com/mohammedrefaat/hamber/Db"
+	"github.com/mohammedrefaat/hamber/stores"
 )
 
 type Service struct {
