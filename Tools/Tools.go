@@ -9,14 +9,16 @@ import (
 	"strings"
 	"time"
 
-	// _ "time/tzdata"
-
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 )
 
-const layout = "02/01/2006"
+type MyInt int
+
+type Number interface {
+	~int | ~int16 | ~int32 | ~int64 | ~int8 | ~float32 | ~float64 | ~uint | ~uint16 | ~uint32 | ~uint64 | ~uint8
+}
 
 func RoundTo(n *float64, decimals uint32) *float64 {
 	if n == nil {
@@ -779,4 +781,150 @@ func DivFloat(f []float64) float64 {
 	}
 	final, _ := div.Float64()
 	return final
+}
+
+func FromPointer[T any](elm *T) T {
+	var zero T
+	if elm == nil {
+		return zero
+	}
+	return *elm
+}
+
+func ToPointer[T any](elm T) *T {
+	return &elm
+}
+
+func ConvertNumber[F Number, To Number](f F) To {
+	return To(f)
+}
+
+func ConvertNumber2[F Number, To Number](f *F) To {
+	var zero To
+	if f == nil {
+		return zero
+	}
+	return To(*f)
+}
+
+func ConvertNumberP[F Number, To Number](f *F) *To {
+	if f == nil {
+		return nil
+	}
+	val := To(*f)
+	return &val
+}
+
+func Default[T any](t *T) T {
+	var zero T
+	if t == nil {
+		return zero
+	}
+	return *t
+}
+
+func DefaultWithValue[T any](t *T, def T) T {
+	if t == nil {
+		return def
+	}
+	return *t
+}
+
+func Sum[T Number](floats ...*T) T {
+	var sm T = 0
+	for id := range floats {
+		if floats[id] != nil {
+			sm = sm + *floats[id]
+		}
+	}
+	return sm
+}
+
+func Max[T Number](floats ...*T) *T {
+	var mx *T
+	for id := range floats {
+		if floats[id] != nil {
+			if mx == nil || *mx < *floats[id] {
+				mx = floats[id]
+			}
+		}
+	}
+	return mx
+}
+
+func Min[T Number](floats ...*T) *T {
+	var mx *T = nil
+	for id := range floats {
+		if floats[id] != nil {
+			if mx == nil || *mx > *floats[id] {
+				mx = floats[id]
+			}
+		}
+	}
+	return mx
+}
+
+func Divide[T Number](m *T, n *T) *T {
+	if m == nil || n == nil {
+		return nil
+	}
+	if *n == 0 {
+		return nil
+	}
+	dv := (*m) / (*n)
+	return &dv
+}
+
+func Multiply[T Number](m *T, n *T) *T {
+	if m == nil || n == nil {
+		return nil
+	}
+	rs := (*m) * (*n)
+	return &rs
+}
+
+func ParseStringToNumber[T Number](s string) (*T, error) {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return nil, err
+	}
+	val := T(f)
+	return &val, nil
+}
+
+func ConvertToString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	if reflect.ValueOf(v).Kind() == reflect.Ptr {
+		if reflect.ValueOf(v).Kind() == reflect.Ptr && reflect.ValueOf(v).IsNil() {
+			return ""
+		}
+		return fmt.Sprintf("%v", reflect.Indirect(reflect.ValueOf(v)))
+	}
+	return fmt.Sprintf("%v", v)
+}
+
+func ConvertToPtrString(v interface{}) *string {
+	if v == nil {
+		return nil
+	}
+	if reflect.ValueOf(v).Kind() == reflect.Ptr {
+		if reflect.ValueOf(v).Kind() == reflect.Ptr && reflect.ValueOf(v).IsNil() {
+			return nil
+		}
+		s := fmt.Sprintf("%v", reflect.Indirect(reflect.ValueOf(v)))
+		return &s
+	}
+	s := fmt.Sprintf("%v", v)
+	return &s
+}
+func NumberFound[T Number](n T, numbers ...T) bool {
+	for i := range numbers {
+		numb := numbers[i]
+		if n == numb {
+			return true
+		}
+	}
+	return false
 }
