@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	config "github.com/mohammedrefaat/hamber/Config"
+
 	db "github.com/mohammedrefaat/hamber/Db"
 	"github.com/mohammedrefaat/hamber/stores"
 )
@@ -31,12 +32,14 @@ func NewServer() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	stStore := stores.NewDbStore(db)
+	stStore, err := stores.NewDbStore(db)
 	if err != nil {
 		return nil, err
 	}
 	router, err := GetRouter()
-
+	if err != nil {
+		return nil, err
+	}
 	serv := Service{
 		stStore: stStore,
 		Router:  router,

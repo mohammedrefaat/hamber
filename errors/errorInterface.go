@@ -1,0 +1,8 @@
+package errors
+
+import "context"
+
+type Error interface {
+	// return errors.New("المستخدم غير معروف ")
+	ErrUnknownUserId(ctx context.Context) error
+}
