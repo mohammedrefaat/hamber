@@ -16,6 +16,13 @@ func (e *CustomError) NewError() string {
 	return e.Message
 }
 
+func NewError(err CustomError) *CustomError {
+	return &CustomError{
+		Message: err.Message,
+		Code:    err.Code,
+	}
+}
+
 func (a *CustomError) ErrUnknownUserId(ctx context.Context) error {
 	lng, ok := ctx.Value(middleware.LanguageKey).(string)
 	if !ok {

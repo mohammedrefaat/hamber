@@ -1,18 +1,20 @@
 package stores
 
 import (
-	"errors"
+	"net/http"
 
 	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
 	tools "github.com/mohammedrefaat/hamber/Tools"
+	errors "github.com/mohammedrefaat/hamber/errors"
 	"gorm.io/gorm"
 )
 
+// DbStore struct
 type DbStore struct {
 	db *gorm.DB
-	//Router *gin.Engine
 }
 
+// NewDbStore initializes a new DbStore
 func NewDbStore(db *gorm.DB) (*DbStore, error) {
 	err := dbmodels.Migrator(db)
 	if err != nil {
@@ -25,19 +27,27 @@ func NewDbStore(db *gorm.DB) (*DbStore, error) {
 func (store *DbStore) CreateUser(user *dbmodels.User) error {
 	// Validate email
 	if !tools.ValidateEmail(&user.Email) {
-		return errors.New(" البريد الالكتروني غير صحيح")
-
+		return errors.NewError(errorsCustomError{
+			Message: "البريد الالكتروني غير صحيح",
+			Code:    http.StatusBadRequest,
+		})
 	}
 
 	// Check if email already exists
 	var existingUser dbmodels.User
 	if err := store.db.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
-		return errors.New("email already exists")
+		return &CustomError{
+			Message: "email already exists",
+			Code:    http.StatusConflict, // 409 Conflict
+		}
 	}
 
 	// Check if username already exists
 	if err := store.db.Where("name = ?", user.Name).First(&existingUser).Error; err == nil {
-		return errors.New("username already exists")
+		return &CustomError{
+			Message: "username already exists",
+			Code:    http.StatusConflict, // 409 Conflict
+		}
 	}
 
 	return store.db.Create(user).Error
@@ -47,7 +57,10 @@ func (store *DbStore) CreateUser(user *dbmodels.User) error {
 func (store *DbStore) GetUser(id uint) (*dbmodels.User, error) {
 	var user dbmodels.User
 	if err := store.db.First(&user, id).Error; err != nil {
-		return nil, err
+		return nil, &CustomError{
+			Message: "user not found",
+			Code:    http.StatusNotFound,
+		}
 	}
 	return &user, nil
 }
@@ -66,12 +79,18 @@ func (store *DbStore) DeleteUser(id uint) error {
 func (store *DbStore) Login(email, password string) (*dbmodels.User, error) {
 	var user dbmodels.User
 	if err := store.db.Where("email = ?", email).First(&user).Error; err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, &CustomError{
+			Message: "invalid email or password",
+			Code:    http.StatusUnauthorized, // 401 Unauthorized
+		}
 	}
 
 	// Here you should hash and compare the password; this is a simple comparison
 	if user.Password != password {
-		return nil, errors.New("invalid email or password")
+		return nil, &CustomError{
+			Message: "invalid email or password",
+			Code:    http.StatusUnauthorized, // 401 Unauthorized
+		}
 	}
 
 	return &user, nil
