@@ -1,0 +1,100 @@
+package middleware
+
+import (
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"golang.org/x/time/rate"
+
+	config"github.com/mohammedrefaat/hamber/config"
+)
+
+type rateLimiter struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
+type RateLimiterMiddleware struct {
+	limiters map[string]*rateLimiter
+	mu       sync.RWMutex
+	rate     rate.Limit
+	burst    int
+	cleanup  time.Duration
+	stopCh   chan struct{}
+}
+
+// RateLimiter returns a Gin middleware that rate limits per client IP
+func RateLimiter(cfg config.Config.RateLimitConfig) gin.HandlerFunc {
+	rl := &RateLimiterMiddleware{
+		limiters: make(map[string]*rateLimiter),
+		rate:     rate.Every(cfg.Window / time.Duration(cfg.Requests)),
+		burst:    cfg.Requests,
+		cleanup:  time.Minute,
+		stopCh:   make(chan struct{}),
+	}
+
+	go rl.cleanupRoutine()
+
+	return rl.middleware
+}
+
+func (rl *RateLimiterMiddleware) middleware(c *gin.Context) {
+	ip := c.ClientIP()
+
+	limiter := rl.getLimiter(ip).limiter
+	if !limiter.Allow() {
+		c.Header("Retry-After", rl.cleanup.String())
+		c.JSON(http.StatusTooManyRequests, gin.H{
+			"error":       "rate limit exceeded",
+			"retry_after": rl.cleanup.Seconds(),
+		})
+		c.Abort()
+		return
+	}
+
+	c.Next()
+}
+
+func (rl *RateLimiterMiddleware) getLimiter(ip string) *rateLimiter {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	limiter, exists := rl.limiters[ip]
+	if !exists {
+		limiter = &rateLimiter{
+			limiter:  rate.NewLimiter(rl.rate, rl.burst),
+			lastSeen: time.Now(),
+		}
+		rl.limiters[ip] = limiter
+	}
+
+	limiter.lastSeen = time.Now()
+	return limiter
+}
+
+func (rl *RateLimiterMiddleware) cleanupRoutine() {
+	ticker := time.NewTicker(rl.cleanup)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			rl.mu.Lock()
+			for ip, limiter := range rl.limiters {
+				if time.Since(limiter.lastSeen) > rl.cleanup {
+					delete(rl.limiters, ip)
+				}
+			}
+			rl.mu.Unlock()
+		case <-rl.stopCh:
+			return
+		}
+	}
+}
+
+// Stop gracefully ends the cleanup goroutine (e.g. on server shutdown)
+func (rl *RateLimiterMiddleware) Stop() {
+	close(rl.stopCh)
+}

@@ -59,17 +59,17 @@ type Admin struct {
 }
 
 type User struct {
-	ID        uint    `gorm:"primaryKey"`
-	Name      string  `gorm:"size:255;not null"`
-	Email     string  `gorm:"size:255;unique;not null"`
-	Password  string  `gorm:"not null"`
-	Subdomain string  `gorm:"size:255;unique;not null"`
-	RoleID    uint    `gorm:"not null"`              // Foreign key to the Role table
-	Role      []Role  `gorm:"many2many:user_roles;"` // Many-to-many relationship between users and roles
-	PackageID uint    `gorm:"not null"`
-	Package   Package `gorm:"foreignKey:PackageID"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        uint      `gorm:"primaryKey" json:"ID,omitempty"`
+	Name      string    `gorm:"size:255;not null" json:"Name,omitempty"`
+	Email     string    `gorm:"size:255;unique;not null" json:"Email,omitempty"`
+	Password  string    `gorm:"not null" json:"Password,omitempty"`
+	Subdomain string    `gorm:"size:255;unique;not null" json:"Subdomain,omitempty"`
+	RoleID    uint      `gorm:"not null" json:"RoleID,omitempty"`            // Foreign key to the Role table
+	Role      []Role    `gorm:"many2many:user_roles;" json:"Role,omitempty"` // Many-to-many relationship between users and roles
+	PackageID uint      `gorm:"not null" json:"PackageID,omitempty"`
+	Package   Package   `json:"Package,omitempty"`
+	CreatedAt time.Time `json:"CreatedAt,omitempty"`
+	UpdatedAt time.Time `json:"UpdatedAt,omitempty"`
 }
 type Role struct {
 	ID          uint   `gorm:"primaryKey"`

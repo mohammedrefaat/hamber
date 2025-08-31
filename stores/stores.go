@@ -5,9 +5,18 @@ import (
 
 	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
 	tools "github.com/mohammedrefaat/hamber/Tools"
-	errors "github.com/mohammedrefaat/hamber/errors"
 	"gorm.io/gorm"
 )
+
+// CustomError struct
+type CustomError struct {
+	Message string
+	Code    int
+}
+
+func (e *CustomError) Error() string {
+	return e.Message
+}
 
 // DbStore struct
 type DbStore struct {
@@ -17,20 +26,17 @@ type DbStore struct {
 // NewDbStore initializes a new DbStore
 func NewDbStore(db *gorm.DB) (*DbStore, error) {
 	err := dbmodels.Migrator(db)
-	if err != nil {
-		return nil, err
-	}
-	return &DbStore{db: db}, nil
+	return nil, err
 }
 
 // CreateUser inserts a new user into the database
 func (store *DbStore) CreateUser(user *dbmodels.User) error {
 	// Validate email
 	if !tools.ValidateEmail(&user.Email) {
-		return errors.NewError(errorsCustomError{
+		return &CustomError{
 			Message: "البريد الالكتروني غير صحيح",
 			Code:    http.StatusBadRequest,
-		})
+		}
 	}
 
 	// Check if email already exists
