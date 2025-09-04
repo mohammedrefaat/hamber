@@ -6,10 +6,12 @@ require (
 	github.com/briandowns/spinner v1.23.1
 	github.com/fatih/color v1.18.0
 	github.com/gin-gonic/gin v1.10.0
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang/protobuf v1.5.4
 	github.com/jinzhu/copier v0.4.0
 	github.com/minio/minio-go/v7 v7.0.82
 	github.com/shopspring/decimal v1.4.0
+	golang.org/x/crypto v0.31.0
 	golang.org/x/image v0.23.0
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/postgres v1.5.11
@@ -55,7 +57,6 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	golang.org/x/arch v0.12.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect

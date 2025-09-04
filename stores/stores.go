@@ -55,6 +55,12 @@ func (store *DbStore) CreateUser(user *dbmodels.User) error {
 			Code:    http.StatusConflict, // 409 Conflict
 		}
 	}
+	if err := user.HashPassword(user.Password); err != nil {
+		return &CustomError{
+			Message: "Failed to hash password",
+			Code:    http.StatusInternalServerError,
+		}
+	}
 
 	return store.db.Create(user).Error
 }
@@ -92,7 +98,7 @@ func (store *DbStore) Login(email, password string) (*dbmodels.User, error) {
 	}
 
 	// Here you should hash and compare the password; this is a simple comparison
-	if user.Password != password {
+	if !user.CheckPassword(password) {
 		return nil, &CustomError{
 			Message: "invalid email or password",
 			Code:    http.StatusUnauthorized, // 401 Unauthorized
