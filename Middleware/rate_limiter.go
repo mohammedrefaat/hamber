@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 
-	config "github.com/mohammedrefaat/hamber/config"
+	config "github.com/mohammedrefaat/hamber/Config"
 )
 
 type rateLimiter struct {
@@ -27,9 +27,17 @@ type RateLimiterMiddleware struct {
 
 // RateLimiter returns a Gin middleware that rate limits per client IP
 func RateLimiter(cfg config.RateLimitConfig) gin.HandlerFunc {
+	// Parse the window duration from string
+	windowDuration := time.Minute // default
+	if cfg.Window != "" {
+		if parsed, err := time.ParseDuration(cfg.Window); err == nil {
+			windowDuration = parsed
+		}
+	}
+
 	rl := &RateLimiterMiddleware{
 		limiters: make(map[string]*rateLimiter),
-		rate:     rate.Every(cfg.Window / time.Duration(cfg.Requests)),
+		rate:     rate.Every(windowDuration / time.Duration(cfg.Requests)),
 		burst:    cfg.Requests,
 		cleanup:  time.Minute,
 		stopCh:   make(chan struct{}),

@@ -35,9 +35,8 @@ func GetMod() []interface{} {
 	}
 }
 
-// Modify Migrator to use the correct type
+// Migrator runs auto-migration for all models
 func Migrator(db *gorm.DB) error {
-	// Now modelsToMigrate is a slice of interfaces, so we can range over it
 	modelsToMigrate := GetMod()
 
 	// Loop through the models and auto-migrate each one
@@ -68,7 +67,7 @@ type User struct {
 	RoleID                      uint      `gorm:"not null" json:"RoleID,omitempty"`            // Foreign key to the Role table
 	Role                        []Role    `gorm:"many2many:user_roles;" json:"Role,omitempty"` // Many-to-many relationship between users and roles
 	PackageID                   uint      `gorm:"not null" json:"PackageID,omitempty"`
-	Package                     Package   `json:"Package,omitempty"`
+	Package                     Package   `gorm:"foreignKey:PackageID" json:"Package,omitempty"`
 	CreatedAt                   time.Time `json:"CreatedAt,omitempty"`
 	UpdatedAt                   time.Time `json:"UpdatedAt,omitempty"`
 	IS_ACTIVE                   bool      `gorm:"default:true" json:"IS_ACTIVE,omitempty"`

@@ -6,8 +6,13 @@ database:
   port: 5432
   sslmode: disable
   timezone: Asia/Shanghai
+
 server:
-  port: ":8088"
-  read_timeout: 10  # in seconds
-  write_timeout: 10 # in seconds
+  port: ":8080"
+  read_timeout: "10s"    # Changed from 10 to "10s"
+  write_timeout: "10s"   # Changed from 10 to "10s"
   max_header_bytes: 1048576  # 1 MB
+
+rate_limit:
+  requests: 100
+  window: "1m"   # 1 minute window

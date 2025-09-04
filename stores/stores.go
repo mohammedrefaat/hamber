@@ -26,7 +26,10 @@ type DbStore struct {
 // NewDbStore initializes a new DbStore
 func NewDbStore(db *gorm.DB) (*DbStore, error) {
 	err := dbmodels.Migrator(db)
-	return nil, err
+	if err != nil {
+		return nil, err
+	}
+	return &DbStore{db: db}, nil
 }
 
 // CreateUser inserts a new user into the database

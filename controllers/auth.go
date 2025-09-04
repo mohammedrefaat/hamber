@@ -5,10 +5,18 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mohammedrefaat/hamber/models"
-	database "github.com/mohammedrefaat/hamber/stores"
+	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
+	"github.com/mohammedrefaat/hamber/stores"
 	"github.com/mohammedrefaat/hamber/utils"
 )
+
+// Global store variable - this should be properly initialized
+var globalStore *stores.DbStore
+
+// SetStore initializes the global store
+func SetStore(store *stores.DbStore) {
+	globalStore = store
+}
 
 type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
@@ -18,8 +26,9 @@ type LoginRequest struct {
 type RegisterRequest struct {
 	Email     string `json:"email" binding:"required,email"`
 	Password  string `json:"password" binding:"required,min=6"`
-	FirstName string `json:"first_name" binding:"required"`
-	LastName  string `json:"last_name" binding:"required"`
+	Name      string `json:"name" binding:"required"`
+	Subdomain string `json:"subdomain" binding:"required"`
+	PackageID uint   `json:"package_id" binding:"required"`
 }
 
 type RefreshTokenRequest struct {
@@ -27,9 +36,9 @@ type RefreshTokenRequest struct {
 }
 
 type AuthResponse struct {
-	AccessToken  string      `json:"access_token"`
-	RefreshToken string      `json:"refresh_token"`
-	User         models.User `json:"user"`
+	AccessToken  string        `json:"access_token"`
+	RefreshToken string        `json:"refresh_token"`
+	User         dbmodels.User `json:"user"`
 }
 
 func Login(c *gin.Context) {
@@ -40,14 +49,16 @@ func Login(c *gin.Context) {
 		})
 		return
 	}
-	user, err := s.stStore.Login(req.Email, req.Password)
+
+	user, err := globalStore.Login(req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "invalid email or password",
 		})
 		return
 	}
-	accessToken, err := utils.GenerateJWT(&user)
+
+	accessToken, err := utils.GenerateJWT(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to generate access token",
@@ -55,7 +66,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	refreshToken, err := utils.GenerateRefreshToken(&user)
+	refreshToken, err := utils.GenerateRefreshToken(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to generate refresh token",
@@ -66,7 +77,7 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		User:         user,
+		User:         *user,
 	})
 }
 
@@ -79,32 +90,19 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Check if user already exists
-	var existingUser models.User
-	if err := database.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "User already exists",
-		})
-		return
-	}
-
-	user := models.User{
+	user := dbmodels.User{
+		Name:      req.Name,
 		Email:     req.Email,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Role:      "user", // default role
+		Password:  req.Password,
+		Subdomain: req.Subdomain,
+		RoleID:    1, // default role ID
+		PackageID: req.PackageID,
+		IS_ACTIVE: true,
 	}
 
-	if err := user.HashPassword(req.Password); err != nil {
+	if err := globalStore.CreateUser(&user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to hash password",
-		})
-		return
-	}
-
-	if err := database.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to create user",
+			"error": "Failed to create user: " + err.Error(),
 		})
 		return
 	}
@@ -149,15 +147,15 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := database.DB.First(&user, claims.UserID).Error; err != nil {
+	user, err := globalStore.GetUser(claims.UserID)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "User not found",
 		})
 		return
 	}
 
-	newAccessToken, err := utils.GenerateJWT(&user)
+	newAccessToken, err := utils.GenerateJWT(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to generate new access token",
@@ -165,7 +163,7 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	newRefreshToken, err := utils.GenerateRefreshToken(&user)
+	newRefreshToken, err := utils.GenerateRefreshToken(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to generate new refresh token",
@@ -182,8 +180,8 @@ func RefreshToken(c *gin.Context) {
 func GetProfile(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	var user models.User
-	if err := database.DB.First(&user, userID).Error; err != nil {
+	user, err := globalStore.GetUser(userID.(uint))
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "User not found",
 		})
@@ -196,8 +194,8 @@ func GetProfile(c *gin.Context) {
 func UpdateProfile(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	var user models.User
-	if err := database.DB.First(&user, userID).Error; err != nil {
+	user, err := globalStore.GetUser(userID.(uint))
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "User not found",
 		})
@@ -205,8 +203,7 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	var updateData struct {
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
+		Name string `json:"name"`
 	}
 
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -216,10 +213,9 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	user.FirstName = updateData.FirstName
-	user.LastName = updateData.LastName
+	user.Name = updateData.Name
 
-	if err := database.DB.Save(&user).Error; err != nil {
+	if err := globalStore.UpdateUser(user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update user",
 		})
@@ -231,15 +227,10 @@ func UpdateProfile(c *gin.Context) {
 
 // Admin-only controllers
 func GetAllUsers(c *gin.Context) {
-	var users []models.User
-	if err := database.DB.Find(&users).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch users",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, users)
+	// This would require implementing a GetAllUsers method in the store
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error": "Not implemented yet",
+	})
 }
 
 func DeleteUser(c *gin.Context) {
@@ -252,7 +243,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := database.DB.Delete(&models.User{}, id).Error; err != nil {
+	if err := globalStore.DeleteUser(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete user",
 		})

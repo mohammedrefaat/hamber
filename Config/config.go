@@ -25,15 +25,15 @@ type DatabaseConfig struct {
 }
 
 type ServerConfig struct {
-	Port           string        `yaml:"port"`
-	ReadTimeout    time.Duration `yaml:"read_timeout"`
-	WriteTimeout   time.Duration `yaml:"write_timeout"`
-	MaxHeaderBytes int           `yaml:"max_header_bytes"`
+	Port           string `yaml:"port"`
+	ReadTimeout    string `yaml:"read_timeout"`  // Changed to string for YAML parsing
+	WriteTimeout   string `yaml:"write_timeout"` // Changed to string for YAML parsing
+	MaxHeaderBytes int    `yaml:"max_header_bytes"`
 }
 
 type RateLimitConfig struct {
-	Requests int           `yaml:"requests"`
-	Window   time.Duration `yaml:"window"`
+	Requests int    `yaml:"requests"`
+	Window   string `yaml:"window"` // Changed to string for YAML parsing
 }
 
 // LoadConfig loads configuration from a YAML file
@@ -71,6 +71,42 @@ func (c *Config) GetDSN() string {
 	)
 }
 
+// GetReadTimeout returns the read timeout as time.Duration
+func (c *Config) GetReadTimeout() time.Duration {
+	if c.Server.ReadTimeout == "" {
+		return 5 * time.Second // default
+	}
+	duration, err := time.ParseDuration(c.Server.ReadTimeout)
+	if err != nil {
+		return 5 * time.Second // fallback to default
+	}
+	return duration
+}
+
+// GetWriteTimeout returns the write timeout as time.Duration
+func (c *Config) GetWriteTimeout() time.Duration {
+	if c.Server.WriteTimeout == "" {
+		return 10 * time.Second // default
+	}
+	duration, err := time.ParseDuration(c.Server.WriteTimeout)
+	if err != nil {
+		return 10 * time.Second // fallback to default
+	}
+	return duration
+}
+
+// GetRateWindow returns the rate limit window as time.Duration
+func (c *Config) GetRateWindow() time.Duration {
+	if c.RateLimit.Window == "" {
+		return time.Minute // default
+	}
+	duration, err := time.ParseDuration(c.RateLimit.Window)
+	if err != nil {
+		return time.Minute // fallback to default
+	}
+	return duration
+}
+
 // Validate basic sanity of config
 func (c *Config) Validate() error {
 	if c.Server.Port == "" {
@@ -79,16 +115,34 @@ func (c *Config) Validate() error {
 	if c.Database.Host == "" || c.Database.User == "" || c.Database.DBName == "" {
 		return fmt.Errorf("database host, user and dbname must not be empty")
 	}
+
+	// Validate duration strings
+	if c.Server.ReadTimeout != "" {
+		if _, err := time.ParseDuration(c.Server.ReadTimeout); err != nil {
+			return fmt.Errorf("invalid read_timeout format: %w", err)
+		}
+	}
+	if c.Server.WriteTimeout != "" {
+		if _, err := time.ParseDuration(c.Server.WriteTimeout); err != nil {
+			return fmt.Errorf("invalid write_timeout format: %w", err)
+		}
+	}
+	if c.RateLimit.Window != "" {
+		if _, err := time.ParseDuration(c.RateLimit.Window); err != nil {
+			return fmt.Errorf("invalid rate limit window format: %w", err)
+		}
+	}
+
 	return nil
 }
 
 // applyDefaults sets safe defaults where config values are missing
 func (c *Config) applyDefaults() {
-	if c.Server.ReadTimeout == 0 {
-		c.Server.ReadTimeout = 5 * time.Second
+	if c.Server.ReadTimeout == "" {
+		c.Server.ReadTimeout = "5s"
 	}
-	if c.Server.WriteTimeout == 0 {
-		c.Server.WriteTimeout = 10 * time.Second
+	if c.Server.WriteTimeout == "" {
+		c.Server.WriteTimeout = "10s"
 	}
 	if c.Server.MaxHeaderBytes == 0 {
 		c.Server.MaxHeaderBytes = 1 << 20 // 1 MB
@@ -102,7 +156,7 @@ func (c *Config) applyDefaults() {
 	if c.RateLimit.Requests == 0 {
 		c.RateLimit.Requests = 100
 	}
-	if c.RateLimit.Window == 0 {
-		c.RateLimit.Window = time.Minute
+	if c.RateLimit.Window == "" {
+		c.RateLimit.Window = "1m"
 	}
 }

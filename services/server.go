@@ -1,13 +1,13 @@
 package services
 
 import (
+	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	config "github.com/mohammedrefaat/hamber/Config"
-
 	db "github.com/mohammedrefaat/hamber/Db"
+	"github.com/mohammedrefaat/hamber/controllers"
 	"github.com/mohammedrefaat/hamber/stores"
 )
 
@@ -18,7 +18,6 @@ type Service struct {
 }
 
 func NewServer() (*Service, error) {
-
 	config, err := config.LoadConfig("config.yaml")
 	if err != nil {
 		return nil, err
@@ -28,18 +27,24 @@ func NewServer() (*Service, error) {
 	dsn := config.GetDSN()
 
 	// Connect to the database
-	db, err := db.OpenDbConn(dsn)
+	database, err := db.OpenDbConn(dsn)
 	if err != nil {
 		return nil, err
 	}
-	stStore, err := stores.NewDbStore(db)
+
+	stStore, err := stores.NewDbStore(database)
 	if err != nil {
 		return nil, err
 	}
+
+	// Set the global store for controllers
+	controllers.SetStore(stStore)
+
 	router, err := GetRouter()
 	if err != nil {
 		return nil, err
 	}
+
 	serv := Service{
 		stStore: stStore,
 		Router:  router,
@@ -54,11 +59,14 @@ func (c *Service) Run() {
 	s := &http.Server{
 		Addr:           c.config.Server.Port,
 		Handler:        c.Router,
-		ReadTimeout:    time.Duration(c.config.Server.ReadTimeout) * time.Second,
-		WriteTimeout:   time.Duration(c.config.Server.WriteTimeout) * time.Second,
+		ReadTimeout:    c.config.GetReadTimeout(),
+		WriteTimeout:   c.config.GetWriteTimeout(),
 		MaxHeaderBytes: c.config.Server.MaxHeaderBytes,
 	}
 
+	log.Printf("Server starting on port %s", c.config.Server.Port)
 	// Start the server
-	s.ListenAndServe()
+	if err := s.ListenAndServe(); err != nil {
+		log.Fatal("Server failed to start:", err)
+	}
 }
