@@ -123,12 +123,13 @@ type Client struct {
 }
 
 type Package struct {
-	ID        uint    `gorm:"primaryKey"`
-	Name      string  `gorm:"size:255;not null"`
-	Price     float64 `gorm:"not null"`
-	Duration  int     `gorm:"not null"` // In days or months
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID               uint    `gorm:"primaryKey"`
+	Name             string  `gorm:"size:255;not null"`
+	Price            float64 `gorm:"not null"`
+	Duration         int     `gorm:"not null"` // In days or months
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	Price_Per_client bool `gorm:"not null"`
 }
 
 type Order struct {
@@ -153,6 +154,7 @@ type Subscription struct {
 	EndDate   time.Time `gorm:"not null"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	Price     float64 `gorm:"not null"`
 }
 
 type OrderStatus int32
