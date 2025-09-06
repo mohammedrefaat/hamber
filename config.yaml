@@ -8,7 +8,7 @@ database:
   timezone: Asia/Shanghai
 
 server:
-  port: ":8080"
+  port: ":8088"
   read_timeout: "10s"    # Changed from 10 to "10s"
   write_timeout: "10s"   # Changed from 10 to "10s"
   max_header_bytes: 1048576  # 1 MB

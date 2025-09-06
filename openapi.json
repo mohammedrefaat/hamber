@@ -1,42 +1,95 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Auth API",
+    "title": "Hamber API",
     "version": "1.0.0",
-    "description": "Authentication endpoints for login, register, and refresh token"
+    "description": "Complete API for authentication, packages, email verification, password reset, and blog management"
   },
+  "servers": [
+    {
+      "url": "http://localhost:8080/api",
+      "description": "Development server"
+    }
+  ],
   "paths": {
-    "/login": {
-      "post": {
-        "summary": "User login",
-        "description": "Authenticate user and return tokens",
-        "tags": ["auth"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/LoginRequest" }
-            }
-          }
-        },
+    "/ping": {
+      "get": {
+        "summary": "Health check",
+        "tags": ["health"],
         "responses": {
           "200": {
-            "description": "Successful login",
+            "description": "Service is running",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "pong" }
+                  }
+                }
               }
             }
-          },
-          "400": { "description": "Invalid input" },
-          "401": { "description": "Unauthorized" }
+          }
         }
       }
     },
-    "/register": {
+    "/packages": {
+      "get": {
+        "summary": "Get all packages",
+        "tags": ["packages"],
+        "responses": {
+          "200": {
+            "description": "List of packages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "packages": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Package" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/packages/{id}": {
+      "get": {
+        "summary": "Get package by ID",
+        "tags": ["packages"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "package": { "$ref": "#/components/schemas/Package" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Package not found" }
+        }
+      }
+    },
+    "/auth/login": {
       "post": {
-        "summary": "Register new user",
-        "description": "Create new account",
+        "summary": "User login",
         "tags": ["auth"],
         "requestBody": {
           "required": true,
@@ -47,7 +100,7 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "Registration successful",
             "content": {
               "application/json": {
@@ -55,14 +108,14 @@
               }
             }
           },
-          "400": { "description": "Invalid input" }
+          "400": { "description": "Invalid input" },
+          "409": { "description": "Email or username already exists" }
         }
       }
     },
-    "/refresh-token": {
+    "/auth/refresh": {
       "post": {
         "summary": "Refresh access token",
-        "description": "Get new access and refresh token",
         "tags": ["auth"],
         "requestBody": {
           "required": true,
@@ -77,12 +130,481 @@
             "description": "Token refreshed",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": { "type": "string" },
+                    "refresh_token": { "type": "string" }
+                  }
+                }
               }
             }
           },
-          "400": { "description": "Invalid input" },
           "401": { "description": "Invalid refresh token" }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "summary": "Request password reset",
+        "tags": ["auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ForgotPasswordRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reset code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Email not found" }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "summary": "Reset password with code",
+        "tags": ["auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResetPasswordRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid or expired code" }
+        }
+      }
+    },
+    "/verify/send-email": {
+      "post": {
+        "summary": "Send email verification code",
+        "tags": ["verification"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SendVerificationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "user_id": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Email not found" }
+        }
+      }
+    },
+    "/verify/email": {
+      "post": {
+        "summary": "Verify email with code",
+        "tags": ["verification"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VerifyEmailRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid or expired code" }
+        }
+      }
+    },
+    "/blogs": {
+      "get": {
+        "summary": "Get published blogs",
+        "tags": ["blogs"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 10, "maximum": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of blogs",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BlogListResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create new blog post",
+        "tags": ["blogs"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateBlogRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Blog created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "blog": { "$ref": "#/components/schemas/Blog" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "400": { "description": "Invalid input" }
+        }
+      }
+    },
+    "/blogs/{id}": {
+      "get": {
+        "summary": "Get blog by ID",
+        "tags": ["blogs"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Blog details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "blog": { "$ref": "#/components/schemas/Blog" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Blog not found" }
+        }
+      },
+      "put": {
+        "summary": "Update blog post",
+        "tags": ["blogs"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateBlogRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Blog updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "blog": { "$ref": "#/components/schemas/Blog" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Blog not found" }
+        }
+      },
+      "delete": {
+        "summary": "Delete blog post",
+        "tags": ["blogs"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Blog deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Blog not found" }
+        }
+      }
+    },
+    "/blogs/{id}/photos": {
+      "post": {
+        "summary": "Upload photos to blog post",
+        "tags": ["blogs"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "photos": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Photos uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" },
+                    "uploaded_photos": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "total_photos": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Blog not found" }
+        }
+      }
+    },
+    "/profile": {
+      "get": {
+        "summary": "Get user profile",
+        "tags": ["user"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "put": {
+        "summary": "Update user profile",
+        "tags": ["user"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "summary": "Get all users (admin only)",
+        "tags": ["admin"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of users" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "501": { "description": "Not implemented yet" }
+        }
+      }
+    },
+    "/admin/users/{id}": {
+      "delete": {
+        "summary": "Delete user (admin only)",
+        "tags": ["admin"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/admin/blogs": {
+      "get": {
+        "summary": "Get all blogs including unpublished (admin only)",
+        "tags": ["admin"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 10 }
+          },
+          {
+            "name": "author_id",
+            "in": "query",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all blogs",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BlogListResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
         }
       }
     }
@@ -115,6 +637,58 @@
           "refresh_token": { "type": "string" }
         }
       },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email" }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "required": ["email", "code", "new_password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "code": { "type": "string", "minLength": 6, "maxLength": 6 },
+          "new_password": { "type": "string", "minLength": 6 }
+        }
+      },
+      "SendVerificationRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string", "format": "email" }
+        }
+      },
+      "VerifyEmailRequest": {
+        "type": "object",
+        "required": ["email", "code"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "code": { "type": "string", "minLength": 6, "maxLength": 6 }
+        }
+      },
+      "CreateBlogRequest": {
+        "type": "object",
+        "required": ["title", "content", "slug"],
+        "properties": {
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "summary": { "type": "string" },
+          "slug": { "type": "string" },
+          "is_published": { "type": "boolean", "default": false }
+        }
+      },
+      "UpdateBlogRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "summary": { "type": "string" },
+          "slug": { "type": "string" },
+          "is_published": { "type": "boolean" }
+        }
+      },
       "AuthResponse": {
         "type": "object",
         "properties": {
@@ -125,17 +699,102 @@
       },
       "User": {
         "type": "object",
-        "description": "Simplified user model from dbmodels.User",
+        "properties": {
+          "ID": { "type": "integer", "format": "int64" },
+          "Name": { "type": "string" },
+          "Email": { "type": "string" },
+          "Phone": { "type": "string" },
+          "Subdomain": { "type": "string" },
+          "PackageID": { "type": "integer", "format": "int64" },
+          "Package": { "$ref": "#/components/schemas/Package" },
+          "CreatedAt": { "type": "string", "format": "date-time" },
+          "UpdatedAt": { "type": "string", "format": "date-time" },
+          "IS_ACTIVE": { "type": "boolean" },
+          "IS_EMAIL_VERIFIED": { "type": "boolean" },
+          "IS_MOBILE_VERIFIED": { "type": "boolean" },
+          "Avatar": { "type": "string" },
+          "Bio": { "type": "string" },
+          "Website": { "type": "string" },
+          "Location": { "type": "string" }
+        }
+      },
+      "Package": {
+        "type": "object",
         "properties": {
           "id": { "type": "integer", "format": "int64" },
-          "email": { "type": "string" },
           "name": { "type": "string" },
-          "subdomain": { "type": "string" },
-          "package_id": { "type": "integer", "format": "int64" },
+          "price": { "type": "number", "format": "double" },
+          "duration": { "type": "integer" },
+          "benefits": { "type": "string", "description": "JSON string containing benefits array" },
+          "description": { "type": "string" },
+          "is_active": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "price_per_client": { "type": "boolean" }
+        }
+      },
+      "Blog": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "summary": { "type": "string" },
+          "slug": { "type": "string" },
+          "author_id": { "type": "integer", "format": "int64" },
+          "author": { "$ref": "#/components/schemas/User" },
+          "photos": { "type": "string", "description": "JSON array of photo URLs" },
+          "is_published": { "type": "boolean" },
+          "published_at": { "type": "string", "format": "date-time" },
           "created_at": { "type": "string", "format": "date-time" },
           "updated_at": { "type": "string", "format": "date-time" }
         }
+      },
+      "BlogListResponse": {
+        "type": "object",
+        "properties": {
+          "blogs": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Blog" }
+          },
+          "total": { "type": "integer", "format": "int64" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   }
-}
+}LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful login",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "400": { "description": "Invalid input" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Register new user",
+        "tags": ["auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/

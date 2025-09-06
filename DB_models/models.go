@@ -20,21 +20,6 @@ type Models struct {
 	UserRole       UserRole
 }
 
-func GetMod() []interface{} {
-	return []interface{}{
-		&User{},
-		&Role{},
-		&Permission{},
-		&Admin{},
-		&Client{},
-		&Package{},
-		&Order{},
-		&Subscription{},
-		&RolePermission{},
-		&UserRole{},
-	}
-}
-
 // Migrator runs auto-migration for all models
 func Migrator(db *gorm.DB) error {
 	modelsToMigrate := GetMod()
@@ -58,11 +43,13 @@ type Admin struct {
 	UpdatedAt time.Time
 }
 
+// Enhanced User model with phone support for future use
 type User struct {
 	ID                          uint      `gorm:"primaryKey" json:"ID,omitempty"`
 	Name                        string    `gorm:"size:255;not null" json:"Name,omitempty"`
 	Email                       string    `gorm:"size:255;unique;not null" json:"Email,omitempty"`
 	Password                    string    `gorm:"not null" json:"Password,omitempty"`
+	Phone                       string    `gorm:"size:20" json:"Phone,omitempty"` // Added phone field
 	Subdomain                   string    `gorm:"size:255;unique;not null" json:"Subdomain,omitempty"`
 	RoleID                      uint      `gorm:"not null" json:"RoleID,omitempty"`            // Foreign key to the Role table
 	Role                        []Role    `gorm:"many2many:user_roles;" json:"Role,omitempty"` // Many-to-many relationship between users and roles
@@ -81,6 +68,17 @@ type User struct {
 	LAST_LOGIN_IP               string    `gorm:"size:255" json:"LAST_LOGIN_IP,omitempty"`
 	IS_EMAIL_VERIFIED           bool      `gorm:"default:false" json:"IS_EMAIL_VERIFIED,omitempty"`
 	IS_MOBILE_VERIFIED          bool      `gorm:"default:false" json:"IS_MOBILE_VERIFIED,omitempty"`
+
+	// New fields for future phone verification
+	PHONE_VERIFICATION_CODE string     `gorm:"size:10" json:"PHONE_VERIFICATION_CODE,omitempty"`
+	PHONE_CODE_EXPIRES_AT   time.Time  `json:"PHONE_CODE_EXPIRES_AT,omitempty"`
+	PHONE_VERIFIED_AT       *time.Time `json:"PHONE_VERIFIED_AT,omitempty"`
+
+	// Profile enhancement
+	Avatar   string `gorm:"size:500" json:"Avatar,omitempty"`
+	Bio      string `gorm:"type:text" json:"Bio,omitempty"`
+	Website  string `gorm:"size:500" json:"Website,omitempty"`
+	Location string `gorm:"size:255" json:"Location,omitempty"`
 }
 
 func (u *User) HashPassword(password string) error {
@@ -95,6 +93,18 @@ func (u *User) HashPassword(password string) error {
 func (u *User) CheckPassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 	return err == nil
+}
+
+// Phone verification model for future SMS verification
+type PhoneVerification struct {
+	ID        uint      `gorm:"primaryKey"`
+	Phone     string    `gorm:"size:20;not null"`
+	Code      string    `gorm:"size:10;not null"`
+	ExpiresAt time.Time `gorm:"not null"`
+	Used      bool      `gorm:"default:false"`
+	UserID    *uint     `gorm:"index"` // Optional, for linking to user
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type Role struct {
@@ -122,16 +132,19 @@ type Client struct {
 	UpdatedAt time.Time
 }
 
+// Updated Package model with benefits stored as JSON
 type Package struct {
-	ID               uint    `gorm:"primaryKey"`
-	Name             string  `gorm:"size:255;not null"`
-	Price            float64 `gorm:"not null"`
-	Duration         int     `gorm:"not null"` // In days or months
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	Price_Per_client bool `gorm:"not null"`
+	ID             uint      `gorm:"primaryKey" json:"id"`
+	Name           string    `gorm:"size:255;not null" json:"name"`
+	Price          float64   `gorm:"not null" json:"price"`
+	Duration       int       `gorm:"not null" json:"duration"`  // In days or months
+	Benefits       string    `gorm:"type:text" json:"benefits"` // JSON string for benefits
+	Description    string    `gorm:"type:text" json:"description"`
+	IsActive       bool      `gorm:"default:true" json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	PricePerClient bool      `json:"price_per_client"`
 }
-
 type Order struct {
 	ID        uint        `gorm:"primaryKey"`
 	ClientID  uint        `gorm:"not null"`
@@ -211,4 +224,61 @@ func (u User) HasPermission(permissionName string) bool {
 		}
 	}
 	return false
+}
+
+// EmailVerification model for email verification codes
+type EmailVerification struct {
+	ID        uint      `gorm:"primaryKey"`
+	Email     string    `gorm:"size:255;not null"`
+	Code      string    `gorm:"size:10;not null"`
+	ExpiresAt time.Time `gorm:"not null"`
+	Used      bool      `gorm:"default:false"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// PasswordReset model for password reset codes
+type PasswordReset struct {
+	ID        uint      `gorm:"primaryKey"`
+	Email     string    `gorm:"size:255;not null"`
+	Code      string    `gorm:"size:10;not null"`
+	ExpiresAt time.Time `gorm:"not null"`
+	Used      bool      `gorm:"default:false"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Blog model for blog posts
+type Blog struct {
+	ID          uint       `gorm:"primaryKey" json:"id"`
+	Title       string     `gorm:"size:500;not null" json:"title"`
+	Content     string     `gorm:"type:text;not null" json:"content"`
+	Summary     string     `gorm:"type:text" json:"summary"`
+	Slug        string     `gorm:"size:500;unique;not null" json:"slug"`
+	AuthorID    uint       `gorm:"not null" json:"author_id"`
+	Author      User       `gorm:"foreignKey:AuthorID" json:"author,omitempty"`
+	Photos      string     `gorm:"type:text" json:"photos"` // JSON array of photo URLs
+	IsPublished bool       `gorm:"default:false" json:"is_published"`
+	PublishedAt *time.Time `json:"published_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// Update the GetMod function to include new models
+func GetMod() []interface{} {
+	return []interface{}{
+		&User{},
+		&Role{},
+		&Permission{},
+		&Admin{},
+		&Client{},
+		&Package{},
+		&Order{},
+		&Subscription{},
+		&RolePermission{},
+		&UserRole{},
+		&EmailVerification{},
+		&PasswordReset{},
+		&Blog{},
+	}
 }
