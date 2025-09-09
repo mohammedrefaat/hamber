@@ -197,6 +197,7 @@ func FacebookCallback(c *gin.Context) {
 	c.JSON(http.StatusOK, authResponse)
 }
 
+/*
 // Apple OAuth Login
 func AppleLogin(c *gin.Context) {
 	state := generateStateOAuthCookie()
@@ -249,7 +250,7 @@ func AppleCallback(c *gin.Context) {
 
 	c.JSON(http.StatusOK, authResponse)
 }
-
+*/
 // Handle OAuth user authentication/registration
 func handleOAuthUser(provider, providerID, email, name, picture, accessToken, refreshToken string) (*AuthResponse, error) {
 	// Check if OAuth profile exists

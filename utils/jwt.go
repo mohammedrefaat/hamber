@@ -2,13 +2,21 @@ package utils
 
 import (
 	"errors"
-	"os"
 	"strconv"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+	config "github.com/mohammedrefaat/hamber/Config"
 	models "github.com/mohammedrefaat/hamber/DB_models"
 )
+
+// Global config variable - will be set from main
+var globalConfig *config.Config
+
+// SetConfig sets the global config for JWT utilities
+func SetConfig(cfg *config.Config) {
+	globalConfig = cfg
+}
 
 type JWTClaim struct {
 	UserID uint   `json:"user_id"`
@@ -18,32 +26,35 @@ type JWTClaim struct {
 }
 
 func GetJWTSecret() string {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		return "your-secret-key-change-this-in-production"
+	cfg := config.GetConfig()
+	if cfg != nil {
+		return cfg.GetJWTSecret() // This will decrypt automatically
 	}
-	return secret
+	return "fallback-secret-key-change-this"
 }
 
 func GetJWTExpirationHours() int {
-	hours := os.Getenv("JWT_EXPIRATION_HOURS")
-	if hours == "" {
-		return 24 // default 24 hours
+	cfg := config.GetConfig()
+	if cfg != nil {
+		return cfg.GetJWTExpirationHours()
 	}
-	h, err := strconv.Atoi(hours)
-	if err != nil {
-		return 24
-	}
-	return h
+	return 24
 }
 
+// Generate JWT with role information
 func GenerateJWT(user *models.User) (string, error) {
 	expirationTime := time.Now().Add(time.Duration(GetJWTExpirationHours()) * time.Hour)
+
+	// Get user role name
+	roleName := "user" // default role
+	if len(user.Role) > 0 {
+		roleName = user.Role[0].Name
+	}
 
 	claims := &JWTClaim{
 		UserID: user.ID,
 		Email:  user.Email,
-		//Role:   user.Role,
+		Role:   roleName,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -75,10 +86,16 @@ func ValidateJWT(tokenString string) (*JWTClaim, error) {
 func GenerateRefreshToken(user *models.User) (string, error) {
 	expirationTime := time.Now().Add(7 * 24 * time.Hour) // 7 days
 
+	// Get user role name
+	roleName := "user" // default role
+	if len(user.Role) > 0 {
+		roleName = user.Role[0].Name
+	}
+
 	claims := &JWTClaim{
 		UserID: user.ID,
 		Email:  user.Email,
-		//Role:   user.Role,
+		Role:   roleName,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -105,4 +122,18 @@ func ValidateRefreshToken(tokenString string) (*JWTClaim, error) {
 	}
 
 	return claims, nil
+}
+
+// Get user permissions from JWT
+func GetUserPermissions(claims *JWTClaim) []string {
+	switch claims.Role {
+	case "admin":
+		return []string{"CREATE_USER", "DELETE_USER", "UPDATE_USER", "VIEW_ALL_USERS", "MANAGE_BLOG", "MANAGE_NEWSLETTER", "MANAGE_CONTACTS", "SYSTEM_CONFIG"}
+	case "moderator":
+		return []string{"UPDATE_USER", "VIEW_ALL_USERS", "MANAGE_BLOG", "VIEW_BLOG_ANALYTICS"}
+	case "user":
+		return []string{"UPDATE_PROFILE", "CREATE_BLOG", "VIEW_OWN_BLOG", "UPLOAD_PHOTOS"}
+	default:
+		return []string{}
+	}
 }

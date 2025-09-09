@@ -9,6 +9,7 @@ import (
 	db "github.com/mohammedrefaat/hamber/Db"
 	"github.com/mohammedrefaat/hamber/controllers"
 	"github.com/mohammedrefaat/hamber/stores"
+	"github.com/mohammedrefaat/hamber/utils"
 )
 
 type Service struct {
@@ -22,6 +23,9 @@ func NewServer() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Set config for JWT utilities
+	utils.SetConfig(config)
 
 	// Get the DSN from config
 	dsn := config.GetDSN()
@@ -40,7 +44,7 @@ func NewServer() (*Service, error) {
 	// Set the global store for controllers
 	controllers.SetStore(stStore)
 
-	router, err := GetRouter()
+	router, err := GetRouter(config)
 	if err != nil {
 		return nil, err
 	}

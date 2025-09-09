@@ -2,14 +2,15 @@ package services
 
 import (
 	"github.com/gin-gonic/gin"
+	config "github.com/mohammedrefaat/hamber/Config"
 	middleware "github.com/mohammedrefaat/hamber/Middleware"
 	"github.com/mohammedrefaat/hamber/controllers"
 )
 
-func GetRouter() (*gin.Engine, error) {
+func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 	router := gin.Default()
 
-	// Initialize OAuth configuration
+	// Initialize OAuth configuration with loaded config
 	controllers.InitOAuth()
 
 	// Add CORS and Language middleware
@@ -53,8 +54,8 @@ func GetRouter() (*gin.Engine, error) {
 				oauth.GET("/facebook/callback", controllers.FacebookCallback)
 
 				// Apple OAuth
-				oauth.GET("/apple", controllers.AppleLogin)
-				oauth.GET("/apple/callback", controllers.AppleCallback)
+				//	oauth.GET("/apple", controllers.AppleLogin)
+				//	oauth.GET("/apple/callback", controllers.AppleCallback)
 			}
 		}
 

@@ -1,18 +1,55 @@
 database:
-  host: localhost
-  user: postgres
-  password: 244159
-  dbname: postgres
-  port: 5432
-  sslmode: disable
-  timezone: Asia/Shanghai
-
+    host: localhost
+    user: postgres
+    password: "244159"
+    dbname: postgres
+    port: 5432
+    sslmode: disable
+    timezone: Asia/Shanghai
 server:
-  port: ":8088"
-  read_timeout: "10s"    # Changed from 10 to "10s"
-  write_timeout: "10s"   # Changed from 10 to "10s"
-  max_header_bytes: 1048576  # 1 MB
-
+    port: :8088
+    read_timeout: 10s
+    write_timeout: 10s
+    max_header_bytes: 1048576
 rate_limit:
-  requests: 100
-  window: "1m"   # 1 minute window
+    requests: 100
+    window: 1m
+oauth:
+    google:
+        client_id: your-google-client-id.apps.googleusercontent.com
+        client_secret: GOCSPX-your-google-client-secret
+        redirect_url: http://localhost:8088/api/auth/oauth/google/callback
+        scopes:
+            - openid
+            - profile
+            - email
+        enabled: false
+    facebook:
+        client_id: your-facebook-app-id
+        client_secret: your-facebook-app-secret
+        redirect_url: http://localhost:8088/api/auth/oauth/facebook/callback
+        scopes:
+            - public_profile
+            - email
+        enabled: false
+jwt:
+    secret: /kuYuZc5a1fG2l5a/RrpTBuuRoTfnt0Tik1UtHZjhL3bTVtrayZxDlGnGz8nc6aYNs598jLdr55llJJwl/PUVky2WgTOpkqS/Xufb9meeH8H0ggCMDM6+qSri7MsiA==
+    encryption_key: PwDN5j8aXFIU65q+8I+4h8WA9DHi/SRoAbb02TixyFg=
+    encrypted: true
+    expiration_hours: 24
+email:
+    smtp_host: smtp.gmail.com
+    smtp_port: 587
+    smtp_username: your-email@gmail.com
+    smtp_password: your-gmail-app-password
+    from_email: noreply@hamber.local
+    from_name: Hamber Platform
+storage:
+    type: local
+    local_path: ./uploads
+    minio:
+        endpoint: localhost:9000
+        access_key: minioadmin
+        secret_key: minioadmin
+        use_ssl: false
+        bucket: hamber-uploads

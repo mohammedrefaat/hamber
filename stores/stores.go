@@ -75,13 +75,168 @@ func (store *DbStore) CreateUser(user *dbmodels.User) error {
 // GetUser retrieves a user by ID
 func (store *DbStore) GetUser(id uint) (*dbmodels.User, error) {
 	var user dbmodels.User
-	if err := store.db.First(&user, id).Error; err != nil {
+	if err := store.db.Preload("Role").Preload("Role.Permissions").First(&user, id).Error; err != nil {
 		return nil, &CustomError{
 			Message: "user not found",
 			Code:    http.StatusNotFound,
 		}
 	}
 	return &user, nil
+}
+
+// NEW: GetAllUsers - MISSING IMPLEMENTATION
+func (store *DbStore) GetAllUsers(page, limit int) ([]dbmodels.User, int64, error) {
+	var users []dbmodels.User
+	var total int64
+
+	// Get total count
+	if err := store.db.Model(&dbmodels.User{}).Count(&total).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to count users",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Get paginated results with role information
+	offset := (page - 1) * limit
+	if err := store.db.Preload("Role").Preload("Package").
+		Offset(offset).
+		Limit(limit).
+		Order("created_at DESC").
+		Find(&users).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to fetch users",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return users, total, nil
+}
+
+// NEW: GetUserWithRole - Get user with role preloaded for JWT generation
+func (store *DbStore) GetUserWithRole(id uint) (*dbmodels.User, error) {
+	var user dbmodels.User
+	if err := store.db.Preload("Role").Preload("Role.Permissions").First(&user, id).Error; err != nil {
+		return nil, &CustomError{
+			Message: "user not found",
+			Code:    http.StatusNotFound,
+		}
+	}
+	return &user, nil
+}
+
+// NEW: GetUserPermissions - Get user permissions by user ID
+func (store *DbStore) GetUserPermissions(userID uint) ([]dbmodels.Permission, error) {
+	var permissions []dbmodels.Permission
+
+	// Get user with roles and permissions
+	var user dbmodels.User
+	if err := store.db.Preload("Role").Preload("Role.Permissions").First(&user, userID).Error; err != nil {
+		return nil, &CustomError{
+			Message: "User not found",
+			Code:    http.StatusNotFound,
+		}
+	}
+
+	// Collect all permissions from all roles
+	permissionMap := make(map[uint]dbmodels.Permission)
+	for _, role := range user.Role {
+		for _, permission := range role.Permissions {
+			permissionMap[permission.ID] = permission
+		}
+	}
+
+	// Convert map to slice
+	for _, permission := range permissionMap {
+		permissions = append(permissions, permission)
+	}
+
+	return permissions, nil
+}
+
+// NEW: Role and Permission management methods
+func (store *DbStore) CreateRole(role *dbmodels.Role) error {
+	return store.db.Create(role).Error
+}
+
+func (store *DbStore) GetRole(id uint) (*dbmodels.Role, error) {
+	var role dbmodels.Role
+	if err := store.db.Preload("Permissions").First(&role, id).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Role not found",
+			Code:    http.StatusNotFound,
+		}
+	}
+	return &role, nil
+}
+
+func (store *DbStore) GetAllRoles() ([]dbmodels.Role, error) {
+	var roles []dbmodels.Role
+	if err := store.db.Preload("Permissions").Find(&roles).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to fetch roles",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	return roles, nil
+}
+
+func (store *DbStore) CreatePermission(permission *dbmodels.Permission) error {
+	return store.db.Create(permission).Error
+}
+
+func (store *DbStore) GetAllPermissions() ([]dbmodels.Permission, error) {
+	var permissions []dbmodels.Permission
+	if err := store.db.Find(&permissions).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to fetch permissions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	return permissions, nil
+}
+
+func (store *DbStore) AssignRoleToUser(userID, roleID uint) error {
+	// Check if user exists
+	var user dbmodels.User
+	if err := store.db.First(&user, userID).Error; err != nil {
+		return &CustomError{
+			Message: "User not found",
+			Code:    http.StatusNotFound,
+		}
+	}
+
+	// Check if role exists
+	var role dbmodels.Role
+	if err := store.db.First(&role, roleID).Error; err != nil {
+		return &CustomError{
+			Message: "Role not found",
+			Code:    http.StatusNotFound,
+		}
+	}
+
+	// Add role to user
+	return store.db.Model(&user).Association("Role").Append(&role)
+}
+
+func (store *DbStore) RemoveRoleFromUser(userID, roleID uint) error {
+	var user dbmodels.User
+	if err := store.db.First(&user, userID).Error; err != nil {
+		return &CustomError{
+			Message: "User not found",
+			Code:    http.StatusNotFound,
+		}
+	}
+
+	var role dbmodels.Role
+	if err := store.db.First(&role, roleID).Error; err != nil {
+		return &CustomError{
+			Message: "Role not found",
+			Code:    http.StatusNotFound,
+		}
+	}
+
+	return store.db.Model(&user).Association("Role").Delete(&role)
 }
 
 // UpdateUser updates an existing user
@@ -97,7 +252,7 @@ func (store *DbStore) DeleteUser(id uint) error {
 // Login validates the user's credentials
 func (store *DbStore) Login(email, password string) (*dbmodels.User, error) {
 	var user dbmodels.User
-	if err := store.db.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := store.db.Preload("Role").Preload("Role.Permissions").Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, &CustomError{
 			Message: "invalid email or password",
 			Code:    http.StatusUnauthorized, // 401 Unauthorized
@@ -141,7 +296,7 @@ func (store *DbStore) GetPackage(id uint) (*dbmodels.Package, error) {
 // User related methods
 func (store *DbStore) GetUserByEmail(email string) (*dbmodels.User, error) {
 	var user dbmodels.User
-	if err := store.db.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := store.db.Preload("Role").Preload("Role.Permissions").Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, &CustomError{
 			Message: "User not found",
 			Code:    http.StatusNotFound,
@@ -175,6 +330,7 @@ func (store *DbStore) ResetPassword(email, newPassword string) error {
 	return store.db.Save(&user).Error
 }
 
+// ... (rest of the original methods remain the same)
 // Email verification methods
 func (store *DbStore) CreateEmailVerification(email string) error {
 	// Generate 6-digit code
@@ -289,7 +445,7 @@ func (store *DbStore) VerifyPasswordResetCode(email, code string) (bool, error) 
 	return true, nil
 }
 
-// Blog methods
+// Blog methods (keeping all original methods)
 func (store *DbStore) CreateBlog(blog *dbmodels.Blog) error {
 	// Check if slug already exists
 	var existingBlog dbmodels.Blog
@@ -481,7 +637,7 @@ func (store *DbStore) GetBlogAnalytics() (*BlogAnalytics, error) {
 	return &analytics, nil
 }
 
-// Newsletter methods
+// Newsletter methods (keeping all original methods)
 func (store *DbStore) CreateNewsletter(newsletter *dbmodels.Newsletter) error {
 	newsletter.SubscribedAt = time.Now()
 	return store.db.Create(newsletter).Error
@@ -538,7 +694,7 @@ func (store *DbStore) GetNewsletterSubscriptions(page, limit int, isActive *bool
 	return newsletters, total, nil
 }
 
-// Contact methods
+// Contact methods (keeping all original methods)
 func (store *DbStore) CreateContact(contact *dbmodels.Contact) error {
 	return store.db.Create(contact).Error
 }
@@ -602,7 +758,7 @@ func (store *DbStore) DeleteContact(id uint) error {
 	return store.db.Delete(&dbmodels.Contact{}, id).Error
 }
 
-// OAuth methods
+// OAuth methods (keeping all original methods)
 func (store *DbStore) CreateOAuthProfile(profile *dbmodels.OAuthProfile) error {
 	return store.db.Create(profile).Error
 }
@@ -634,7 +790,7 @@ func (store *DbStore) DeleteOAuthProfile(id uint) error {
 	return store.db.Delete(&dbmodels.OAuthProfile{}, id).Error
 }
 
-// Statistics methods
+// Statistics methods (keeping all original methods)
 type NewsletterStats struct {
 	TotalSubscriptions     int64 `json:"total_subscriptions"`
 	ActiveSubscriptions    int64 `json:"active_subscriptions"`
