@@ -25,10 +25,12 @@ type LoginRequest struct {
 
 type RegisterRequest struct {
 	Email     string `json:"email" binding:"required,email"`
+	MobileNo  string `json:"mobile_no" binding:"optional"` //todo
 	Password  string `json:"password" binding:"required,min=6"`
 	Name      string `json:"name" binding:"required"`
 	Subdomain string `json:"subdomain" binding:"required"`
-	PackageID uint   `json:"package_id" binding:"required"`
+	PackageID uint   `json:"package_id" binding:"optional"` //todo
+
 }
 
 type RefreshTokenRequest struct {

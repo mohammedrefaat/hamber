@@ -480,3 +480,288 @@ func (store *DbStore) GetBlogAnalytics() (*BlogAnalytics, error) {
 
 	return &analytics, nil
 }
+
+// Newsletter methods
+func (store *DbStore) CreateNewsletter(newsletter *dbmodels.Newsletter) error {
+	newsletter.SubscribedAt = time.Now()
+	return store.db.Create(newsletter).Error
+}
+
+func (store *DbStore) GetNewsletterByEmail(email string) (*dbmodels.Newsletter, error) {
+	var newsletter dbmodels.Newsletter
+	if err := store.db.Where("email = ?", email).First(&newsletter).Error; err != nil {
+		return nil, err
+	}
+	return &newsletter, nil
+}
+
+func (store *DbStore) UpdateNewsletter(newsletter *dbmodels.Newsletter) error {
+	return store.db.Save(newsletter).Error
+}
+
+func (store *DbStore) UnsubscribeNewsletter(email string) error {
+	now := time.Now()
+	return store.db.Model(&dbmodels.Newsletter{}).
+		Where("email = ?", email).
+		Updates(map[string]interface{}{
+			"is_active":       false,
+			"unsubscribed_at": &now,
+		}).Error
+}
+
+func (store *DbStore) GetNewsletterSubscriptions(page, limit int, isActive *bool) ([]dbmodels.Newsletter, int64, error) {
+	var newsletters []dbmodels.Newsletter
+	var total int64
+
+	query := store.db.Model(&dbmodels.Newsletter{})
+	if isActive != nil {
+		query = query.Where("is_active = ?", *isActive)
+	}
+
+	// Get total count
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to count newsletter subscriptions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Get paginated results
+	offset := (page - 1) * limit
+	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&newsletters).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to fetch newsletter subscriptions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return newsletters, total, nil
+}
+
+// Contact methods
+func (store *DbStore) CreateContact(contact *dbmodels.Contact) error {
+	return store.db.Create(contact).Error
+}
+
+func (store *DbStore) GetContacts(page, limit int, unreadOnly bool) ([]dbmodels.Contact, int64, error) {
+	var contacts []dbmodels.Contact
+	var total int64
+
+	query := store.db.Model(&dbmodels.Contact{})
+	if unreadOnly {
+		query = query.Where("is_read = ?", false)
+	}
+
+	// Get total count
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to count contacts",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Get paginated results
+	offset := (page - 1) * limit
+	if err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&contacts).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to fetch contacts",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return contacts, total, nil
+}
+
+func (store *DbStore) GetContact(id uint) (*dbmodels.Contact, error) {
+	var contact dbmodels.Contact
+	if err := store.db.First(&contact, id).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Contact not found",
+			Code:    http.StatusNotFound,
+		}
+	}
+	return &contact, nil
+}
+
+func (store *DbStore) MarkContactAsRead(id uint) error {
+	return store.db.Model(&dbmodels.Contact{}).
+		Where("id = ?", id).
+		Update("is_read", true).Error
+}
+
+func (store *DbStore) MarkContactAsReplied(id uint) error {
+	return store.db.Model(&dbmodels.Contact{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"replied": true,
+			"is_read": true,
+		}).Error
+}
+
+func (store *DbStore) DeleteContact(id uint) error {
+	return store.db.Delete(&dbmodels.Contact{}, id).Error
+}
+
+// OAuth methods
+func (store *DbStore) CreateOAuthProfile(profile *dbmodels.OAuthProfile) error {
+	return store.db.Create(profile).Error
+}
+
+func (store *DbStore) GetOAuthProfile(provider, providerID string) (*dbmodels.OAuthProfile, error) {
+	var profile dbmodels.OAuthProfile
+	if err := store.db.Where("provider = ? AND provider_id = ?", provider, providerID).First(&profile).Error; err != nil {
+		return nil, err
+	}
+	return &profile, nil
+}
+
+func (store *DbStore) UpdateOAuthProfile(profile *dbmodels.OAuthProfile) error {
+	return store.db.Save(profile).Error
+}
+
+func (store *DbStore) GetOAuthProfilesByUser(userID uint) ([]dbmodels.OAuthProfile, error) {
+	var profiles []dbmodels.OAuthProfile
+	if err := store.db.Where("user_id = ?", userID).Find(&profiles).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to fetch OAuth profiles",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	return profiles, nil
+}
+
+func (store *DbStore) DeleteOAuthProfile(id uint) error {
+	return store.db.Delete(&dbmodels.OAuthProfile{}, id).Error
+}
+
+// Statistics methods
+type NewsletterStats struct {
+	TotalSubscriptions     int64 `json:"total_subscriptions"`
+	ActiveSubscriptions    int64 `json:"active_subscriptions"`
+	InactiveSubscriptions  int64 `json:"inactive_subscriptions"`
+	SubscriptionsToday     int64 `json:"subscriptions_today"`
+	SubscriptionsThisWeek  int64 `json:"subscriptions_this_week"`
+	SubscriptionsThisMonth int64 `json:"subscriptions_this_month"`
+}
+
+func (store *DbStore) GetNewsletterStats() (*NewsletterStats, error) {
+	var stats NewsletterStats
+
+	// Total subscriptions
+	if err := store.db.Model(&dbmodels.Newsletter{}).Count(&stats.TotalSubscriptions).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count total subscriptions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Active subscriptions
+	if err := store.db.Model(&dbmodels.Newsletter{}).Where("is_active = ?", true).Count(&stats.ActiveSubscriptions).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count active subscriptions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Inactive subscriptions
+	stats.InactiveSubscriptions = stats.TotalSubscriptions - stats.ActiveSubscriptions
+
+	// Subscriptions today
+	today := time.Now().Truncate(24 * time.Hour)
+	if err := store.db.Model(&dbmodels.Newsletter{}).Where("subscribed_at >= ?", today).Count(&stats.SubscriptionsToday).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count today's subscriptions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Subscriptions this week
+	startOfWeek := time.Now().AddDate(0, 0, -int(time.Now().Weekday()))
+	startOfWeek = startOfWeek.Truncate(24 * time.Hour)
+	if err := store.db.Model(&dbmodels.Newsletter{}).Where("subscribed_at >= ?", startOfWeek).Count(&stats.SubscriptionsThisWeek).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count this week's subscriptions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Subscriptions this month
+	now := time.Now()
+	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	if err := store.db.Model(&dbmodels.Newsletter{}).Where("subscribed_at >= ?", startOfMonth).Count(&stats.SubscriptionsThisMonth).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count this month's subscriptions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return &stats, nil
+}
+
+type ContactStats struct {
+	TotalContacts     int64 `json:"total_contacts"`
+	UnreadContacts    int64 `json:"unread_contacts"`
+	RepliedContacts   int64 `json:"replied_contacts"`
+	ContactsToday     int64 `json:"contacts_today"`
+	ContactsThisWeek  int64 `json:"contacts_this_week"`
+	ContactsThisMonth int64 `json:"contacts_this_month"`
+}
+
+func (store *DbStore) GetContactStats() (*ContactStats, error) {
+	var stats ContactStats
+
+	// Total contacts
+	if err := store.db.Model(&dbmodels.Contact{}).Count(&stats.TotalContacts).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count total contacts",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Unread contacts
+	if err := store.db.Model(&dbmodels.Contact{}).Where("is_read = ?", false).Count(&stats.UnreadContacts).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count unread contacts",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Replied contacts
+	if err := store.db.Model(&dbmodels.Contact{}).Where("replied = ?", true).Count(&stats.RepliedContacts).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count replied contacts",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Contacts today
+	today := time.Now().Truncate(24 * time.Hour)
+	if err := store.db.Model(&dbmodels.Contact{}).Where("created_at >= ?", today).Count(&stats.ContactsToday).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count today's contacts",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Contacts this week
+	startOfWeek := time.Now().AddDate(0, 0, -int(time.Now().Weekday()))
+	startOfWeek = startOfWeek.Truncate(24 * time.Hour)
+	if err := store.db.Model(&dbmodels.Contact{}).Where("created_at >= ?", startOfWeek).Count(&stats.ContactsThisWeek).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count this week's contacts",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	// Contacts this month
+	now := time.Now()
+	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	if err := store.db.Model(&dbmodels.Contact{}).Where("created_at >= ?", startOfMonth).Count(&stats.ContactsThisMonth).Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to count this month's contacts",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return &stats, nil
+}

@@ -9,6 +9,9 @@ import (
 func GetRouter() (*gin.Engine, error) {
 	router := gin.Default()
 
+	// Initialize OAuth configuration
+	controllers.InitOAuth()
+
 	// Add CORS and Language middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.LanguageMiddleware())
@@ -37,6 +40,22 @@ func GetRouter() (*gin.Engine, error) {
 			auth.POST("/refresh", controllers.RefreshToken)
 			auth.POST("/forgot-password", controllers.ForgotPassword)
 			auth.POST("/reset-password", controllers.ResetPassword)
+
+			// OAuth routes
+			oauth := auth.Group("/oauth")
+			{
+				// Google OAuth
+				oauth.GET("/google", controllers.GoogleLogin)
+				oauth.GET("/google/callback", controllers.GoogleCallback)
+
+				// Facebook OAuth
+				oauth.GET("/facebook", controllers.FacebookLogin)
+				oauth.GET("/facebook/callback", controllers.FacebookCallback)
+
+				// Apple OAuth
+				oauth.GET("/apple", controllers.AppleLogin)
+				oauth.GET("/apple/callback", controllers.AppleCallback)
+			}
 		}
 
 		// Email verification routes
@@ -52,6 +71,16 @@ func GetRouter() (*gin.Engine, error) {
 			blogs.GET("/", controllers.GetBlogs) // Public blogs (published only)
 			blogs.GET("/:id", controllers.GetBlog)
 		}
+
+		// Newsletter routes (public)
+		newsletter := api.Group("/newsletter")
+		{
+			newsletter.POST("/subscribe", controllers.SubscribeNewsletter)
+			newsletter.POST("/unsubscribe", controllers.UnsubscribeNewsletter)
+		}
+
+		// Contact form route (public)
+		api.POST("/contact", controllers.SubmitContactForm)
 	}
 
 	// Protected routes (authentication required)
@@ -75,11 +104,30 @@ func GetRouter() (*gin.Engine, error) {
 		admin := protected.Group("/admin")
 		admin.Use(middleware.RequireRole("admin"))
 		{
+			// User management
 			admin.GET("/users", controllers.GetAllUsers)
 			admin.DELETE("/users/:id", controllers.DeleteUser)
 
-			// Admin blog management
+			// Blog management
 			admin.GET("/blogs", controllers.GetAllBlogsAdmin) // All blogs including unpublished
+			admin.GET("/blogs/analytics", controllers.GetBlogAnalytics)
+
+			// Newsletter management
+			adminNewsletter := admin.Group("/newsletter")
+			{
+				adminNewsletter.GET("/subscriptions", controllers.GetAllNewsletterSubscriptions)
+				adminNewsletter.GET("/stats", controllers.GetNewsletterStats)
+			}
+
+			// Contact management
+			adminContact := admin.Group("/contacts")
+			{
+				adminContact.GET("/", controllers.GetAllContacts)
+				adminContact.PUT("/:id/read", controllers.MarkContactAsRead)
+				adminContact.PUT("/:id/replied", controllers.MarkContactAsReplied)
+				adminContact.DELETE("/:id", controllers.DeleteContact)
+				adminContact.GET("/stats", controllers.GetContactStats)
+			}
 		}
 	}
 

@@ -264,6 +264,45 @@ type Blog struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
+// Newsletter subscription model
+type Newsletter struct {
+	ID             uint       `gorm:"primaryKey" json:"id"`
+	Email          string     `gorm:"size:255;unique;not null" json:"email"`
+	IsActive       bool       `gorm:"default:true" json:"is_active"`
+	SubscribedAt   time.Time  `json:"subscribed_at"`
+	UnsubscribedAt *time.Time `json:"unsubscribed_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+// Contact form submission model
+type Contact struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Name      string    `gorm:"size:255;not null" json:"name"`
+	Email     string    `gorm:"size:255;not null" json:"email"`
+	Message   string    `gorm:"type:text;not null" json:"message"`
+	IsRead    bool      `gorm:"default:false" json:"is_read"`
+	Replied   bool      `gorm:"default:false" json:"replied"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// OAuth user profile model for storing OAuth user data
+type OAuthProfile struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	UserID       uint      `gorm:"not null" json:"user_id"`
+	User         User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Provider     string    `gorm:"size:50;not null" json:"provider"` // 'google', 'facebook', 'apple'
+	ProviderID   string    `gorm:"size:255;not null" json:"provider_id"`
+	Email        string    `gorm:"size:255" json:"email"`
+	Name         string    `gorm:"size:255" json:"name"`
+	Picture      string    `gorm:"size:500" json:"picture"`
+	AccessToken  string    `gorm:"type:text" json:"access_token"`
+	RefreshToken string    `gorm:"type:text" json:"refresh_token"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
 // Update the GetMod function to include new models
 func GetMod() []interface{} {
 	return []interface{}{
@@ -280,5 +319,8 @@ func GetMod() []interface{} {
 		&EmailVerification{},
 		&PasswordReset{},
 		&Blog{},
+		&Newsletter{},
+		&Contact{},
+		&OAuthProfile{},
 	}
 }

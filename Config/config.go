@@ -5,6 +5,10 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/oauth2"
+	//"golang.org/x/oauth2/apple"
+	"golang.org/x/oauth2/facebook"
+	"golang.org/x/oauth2/google"
 	"gopkg.in/yaml.v3"
 )
 
@@ -12,6 +16,7 @@ type Config struct {
 	Database  DatabaseConfig  `yaml:"database"`
 	Server    ServerConfig    `yaml:"server"`
 	RateLimit RateLimitConfig `yaml:"rate_limit"`
+	OAuth     OAuthConfigs    `yaml:"oauth"`
 }
 
 type DatabaseConfig struct {
@@ -34,6 +39,19 @@ type ServerConfig struct {
 type RateLimitConfig struct {
 	Requests int    `yaml:"requests"`
 	Window   string `yaml:"window"` // Changed to string for YAML parsing
+}
+
+type OAuthConfigs struct {
+	Google   OAuthProviderConfig `yaml:"google"`
+	Facebook OAuthProviderConfig `yaml:"facebook"`
+	//Apple    OAuthProviderConfig `yaml:"apple"`
+}
+
+type OAuthProviderConfig struct {
+	ClientID     string   `yaml:"client_id"`
+	ClientSecret string   `yaml:"client_secret"`
+	RedirectURL  string   `yaml:"redirect_url"`
+	Scopes       []string `yaml:"scopes"`
 }
 
 // LoadConfig loads configuration from a YAML file
@@ -159,4 +177,37 @@ func (c *Config) applyDefaults() {
 	if c.RateLimit.Window == "" {
 		c.RateLimit.Window = "1m"
 	}
+}
+
+// GetOAuthConfig returns initialized OAuth configurations
+func (c *Config) GetOAuthConfig() *OAuthConfig {
+	return &OAuthConfig{
+		Google: &oauth2.Config{
+			ClientID:     c.OAuth.Google.ClientID,
+			ClientSecret: c.OAuth.Google.ClientSecret,
+			RedirectURL:  c.OAuth.Google.RedirectURL,
+			Scopes:       c.OAuth.Google.Scopes,
+			Endpoint:     google.Endpoint,
+		},
+		Facebook: &oauth2.Config{
+			ClientID:     c.OAuth.Facebook.ClientID,
+			ClientSecret: c.OAuth.Facebook.ClientSecret,
+			RedirectURL:  c.OAuth.Facebook.RedirectURL,
+			Scopes:       c.OAuth.Facebook.Scopes,
+			Endpoint:     facebook.Endpoint,
+		},
+		/*	Apple: &oauth2.Config{
+			ClientID:     c.OAuth.Apple.ClientID,
+			ClientSecret: c.OAuth.Apple.ClientSecret,
+			RedirectURL:  c.OAuth.Apple.RedirectURL,
+			Scopes:       c.OAuth.Apple.Scopes,
+			Endpoint:     apple.Endpoint,
+		},*/
+	}
+}
+
+type OAuthConfig struct {
+	Google   *oauth2.Config
+	Facebook *oauth2.Config
+	//Apple    *oauth2.Config
 }
