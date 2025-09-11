@@ -54,8 +54,8 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 				oauth.GET("/facebook/callback", controllers.FacebookCallback)
 
 				// Apple OAuth
-				//	oauth.GET("/apple", controllers.AppleLogin)
-				//	oauth.GET("/apple/callback", controllers.AppleCallback)
+				oauth.GET("/apple", controllers.AppleLogin)
+				oauth.GET("/apple/callback", controllers.AppleCallback)
 			}
 		}
 

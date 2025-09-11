@@ -197,19 +197,19 @@ func FacebookCallback(c *gin.Context) {
 	c.JSON(http.StatusOK, authResponse)
 }
 
-/*
 // Apple OAuth Login
 func AppleLogin(c *gin.Context) {
 	state := generateStateOAuthCookie()
 	c.SetCookie("oauthstate", state, 3600, "/", "", false, true)
 
-	url := oauthConfig.Apple.AuthCodeURL(state)
+	url := "" //oauthConfig.Apple.AuthCodeURL(state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
 // Apple OAuth Callback
 func AppleCallback(c *gin.Context) {
-	state := c.Query("state")
+	return
+	/*state := c.Query("state")
 	code := c.Query("code")
 
 	oauthState, err := c.Cookie("oauthstate")
@@ -248,9 +248,9 @@ func AppleCallback(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, authResponse)
+	c.JSON(http.StatusOK, authResponse)*/
 }
-*/
+
 // Handle OAuth user authentication/registration
 func handleOAuthUser(provider, providerID, email, name, picture, accessToken, refreshToken string) (*AuthResponse, error) {
 	// Check if OAuth profile exists
