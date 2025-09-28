@@ -1,5 +1,5 @@
 *.exe
-*.rar
+
 *.dat
 actions-runner/
 vendor/
