@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -73,13 +74,24 @@ type StorageConfig struct {
 }
 
 type MinIOConfig struct {
-	Endpoint  string `yaml:"endpoint"`
-	AccessKey string `yaml:"access_key"`
-	SecretKey string `yaml:"secret_key"`
-	UseSSL    bool   `yaml:"use_ssl"`
-	Bucket    string `yaml:"bucket"`
+	Endpoint           string          `yaml:"endpoint"`
+	AccessKey          string          `yaml:"access_key"`
+	SecretKey          string          `yaml:"secret_key"`
+	UseSSL             bool            `yaml:"use_ssl"`
+	Bucket             string          `yaml:"bucket"`
+	PublicRead         bool            `yaml:"public_read"`
+	MaxFileSize        int64           `yaml:"max_file_size"`
+	AllowedExtensions  []string        `yaml:"allowed_extensions"`
+	PhotoQuality       int             `yaml:"photo_quality"`
+	GenerateThumbnails bool            `yaml:"generate_thumbnails"`
+	ThumbnailSizes     []ThumbnailSize `yaml:"thumbnail_sizes"`
 }
 
+type ThumbnailSize struct {
+	Width  int    `yaml:"width"`
+	Height int    `yaml:"height"`
+	Suffix string `yaml:"suffix"`
+}
 type OAuthConfigs struct {
 	Google   OAuthProviderConfig `yaml:"google"`
 	Facebook OAuthProviderConfig `yaml:"facebook"`
@@ -471,4 +483,127 @@ func (c *Config) GetJWTSecret() string {
 
 func (c *Config) GetJWTExpirationHours() int {
 	return c.JWT.ExpirationHours
+}
+
+// GetStorageType returns the configured storage type
+func (c *Config) GetStorageType() string {
+	return c.Storage.Type
+}
+
+// GetMinIOConfig returns MinIO configuration
+func (c *Config) GetMinIOConfig() MinIOConfig {
+	return c.Storage.MinIO
+}
+
+// IsMinIOEnabled checks if MinIO is the configured storage
+func (c *Config) IsMinIOEnabled() bool {
+	return strings.ToLower(c.Storage.Type) == "minio"
+}
+
+// GetMaxFileSize returns the maximum allowed file size
+func (c *Config) GetMaxFileSize() int64 {
+	if c.Storage.MinIO.MaxFileSize == 0 {
+		return 10485760 // 10MB default (matching your config)
+	}
+	return c.Storage.MinIO.MaxFileSize
+}
+
+// IsFileExtensionAllowed checks if a file extension is allowed
+func (c *Config) IsFileExtensionAllowed(ext string) bool {
+	if len(c.Storage.MinIO.AllowedExtensions) == 0 {
+		// Default allowed extensions
+		defaultExts := []string{".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+		for _, allowedExt := range defaultExts {
+			if strings.EqualFold(ext, allowedExt) {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, allowedExt := range c.Storage.MinIO.AllowedExtensions {
+		if strings.EqualFold(ext, allowedExt) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetPhotoQuality returns the JPEG quality setting
+func (c *Config) GetPhotoQuality() int {
+	if c.Storage.MinIO.PhotoQuality == 0 {
+		return 85 // Default quality
+	}
+	return c.Storage.MinIO.PhotoQuality
+}
+
+// ShouldGenerateThumbnails checks if thumbnail generation is enabled
+func (c *Config) ShouldGenerateThumbnails() bool {
+	return c.Storage.MinIO.GenerateThumbnails
+}
+
+// GetThumbnailSizes returns configured thumbnail sizes
+func (c *Config) GetThumbnailSizes() []ThumbnailSize {
+	if len(c.Storage.MinIO.ThumbnailSizes) == 0 && c.Storage.MinIO.GenerateThumbnails {
+		// Default thumbnail sizes
+		return []ThumbnailSize{
+			{Width: 150, Height: 150, Suffix: "_thumb"},
+			{Width: 400, Height: 300, Suffix: "_small"},
+			{Width: 800, Height: 600, Suffix: "_medium"},
+		}
+	}
+	return c.Storage.MinIO.ThumbnailSizes
+}
+
+// GetServerPort returns the server port (handles :8088 format)
+func (c *Config) GetServerPort() string {
+	if strings.HasPrefix(c.Server.Port, ":") {
+		return c.Server.Port
+	}
+	return ":" + c.Server.Port
+}
+
+// Update your existing applyDefaults method to include these
+func (c *Config) applyStorageDefaults() {
+	// Storage defaults
+	if c.Storage.Type == "" {
+		c.Storage.Type = "local"
+	}
+	if c.Storage.LocalPath == "" {
+		c.Storage.LocalPath = "./uploads"
+	}
+
+	// MinIO defaults
+	if c.Storage.MinIO.MaxFileSize == 0 {
+		c.Storage.MinIO.MaxFileSize = 10485760 // 10MB to match your config
+	}
+	if c.Storage.MinIO.PhotoQuality == 0 {
+		c.Storage.MinIO.PhotoQuality = 85
+	}
+	if len(c.Storage.MinIO.AllowedExtensions) == 0 {
+		c.Storage.MinIO.AllowedExtensions = []string{".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+	}
+	if len(c.Storage.MinIO.ThumbnailSizes) == 0 && c.Storage.MinIO.GenerateThumbnails {
+		c.Storage.MinIO.ThumbnailSizes = []ThumbnailSize{
+			{Width: 150, Height: 150, Suffix: "_thumb"},
+			{Width: 400, Height: 300, Suffix: "_small"},
+			{Width: 800, Height: 600, Suffix: "_medium"},
+		}
+	}
+}
+
+// Add this validation to your existing Validate method
+func (c *Config) validateStorage() error {
+	if c.Storage.Type == "minio" {
+		if c.Storage.MinIO.Endpoint == "" {
+			return fmt.Errorf("MinIO endpoint cannot be empty when storage type is minio")
+		}
+		if c.Storage.MinIO.AccessKey == "" || c.Storage.MinIO.SecretKey == "" {
+			return fmt.Errorf("MinIO access_key and secret_key cannot be empty")
+		}
+		if c.Storage.MinIO.Bucket == "" {
+			return fmt.Errorf("MinIO bucket name cannot be empty")
+		}
+	}
+	return nil
 }

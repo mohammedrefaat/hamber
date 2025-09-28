@@ -6,18 +6,21 @@ database:
     port: 5432
     sslmode: disable
     timezone: Asia/Shanghai
+
 server:
     port: :8088
     read_timeout: 10s
     write_timeout: 10s
     max_header_bytes: 1048576
+
 rate_limit:
     requests: 100
     window: 1m
+
 oauth:
     google:
-        client_id: your-google-client-id.apps.googleusercontent.com
-        client_secret: GOCSPX-your-google-client-secret
+        client_id: 426979727744-h3cp732adg4e4r65q01ddccgt79s8j82.apps.googleusercontent.com
+        client_secret: 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
         redirect_url: http://localhost:8088/api/auth/oauth/google/callback
         scopes:
             - openid
@@ -32,11 +35,13 @@ oauth:
             - public_profile
             - email
         enabled: false
+
 jwt:
     secret: /kuYuZc5a1fG2l5a/RrpTBuuRoTfnt0Tik1UtHZjhL3bTVtrayZxDlGnGz8nc6aYNs598jLdr55llJJwl/PUVky2WgTOpkqS/Xufb9meeH8H0ggCMDM6+qSri7MsiA==
     encryption_key: PwDN5j8aXFIU65q+8I+4h8WA9DHi/SRoAbb02TixyFg=
     encrypted: true
     expiration_hours: 24
+
 email:
     smtp_host: smtp.gmail.com
     smtp_port: 587
@@ -44,8 +49,10 @@ email:
     smtp_password: your-gmail-app-password
     from_email: noreply@hamber.local
     from_name: Hamber Platform
+
+# Enhanced Storage Configuration with Photo Features
 storage:
-    type: local
+    type: minio  # Changed from 'local' to 'minio' to enable photo service
     local_path: ./uploads
     minio:
         endpoint: localhost:9000
@@ -53,3 +60,25 @@ storage:
         secret_key: minioadmin
         use_ssl: false
         bucket: hamber-uploads
+        # Enhanced photo-specific configurations
+        public_read: true              # Allow public access to uploaded photos
+        max_file_size: 10485760        # 10MB max file size (in bytes)
+        allowed_extensions:            # Allowed image file extensions
+            - .jpg
+            - .jpeg
+            - .png
+            - .gif
+            - .webp
+            - .bmp
+        photo_quality: 85              # JPEG compression quality (1-100)
+        generate_thumbnails: true      # Enable automatic thumbnail generation
+        thumbnail_sizes:               # Thumbnail configurations
+            - width: 150
+              height: 150
+              suffix: _thumb           # Creates filename_thumb.jpg
+            - width: 400
+              height: 300
+              suffix: _small           # Creates filename_small.jpg
+            - width: 800
+              height: 600
+              suffix: _medium          # Creates filename_medium.jpg
