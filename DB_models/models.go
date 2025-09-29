@@ -303,7 +303,53 @@ type OAuthProfile struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-// Update the GetMod function to include new models
+// Product model for e-commerce products
+type Product struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	Name        string    `gorm:"size:255;not null" json:"name"`
+	Description string    `gorm:"type:text" json:"description"`
+	Price       float64   `gorm:"not null" json:"price"`
+	Quantity    int       `gorm:"not null;default:0" json:"quantity"`
+	SKU         string    `gorm:"size:100;unique;not null" json:"sku"`
+	Category    string    `gorm:"size:255" json:"category"`
+	Brand       string    `gorm:"size:255" json:"brand"`
+	Images      string    `gorm:"type:text" json:"images"` // JSON array of image URLs
+	IsActive    bool      `gorm:"default:true" json:"is_active"`
+	Weight      float64   `gorm:"default:0" json:"weight"`
+	Tags        string    `gorm:"type:text" json:"tags"` // JSON array of tags
+	UserID      uint      `gorm:"not null" json:"user_id"`
+	User        User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// Enhanced Order model
+type OrderItem struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	OrderID   uint      `gorm:"not null" json:"order_id"`
+	ProductID uint      `gorm:"not null" json:"product_id"`
+	Product   Product   `gorm:"foreignKey:ProductID" json:"product,omitempty"`
+	Quantity  int       `gorm:"not null" json:"quantity"`
+	Price     float64   `gorm:"not null" json:"price"` // Price at time of order
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// To do model for task management
+type Todo struct {
+	ID          uint       `gorm:"primaryKey" json:"id"`
+	Title       string     `gorm:"size:500;not null" json:"title"`
+	Description string     `gorm:"type:text" json:"description"`
+	IsCompleted bool       `gorm:"default:false" json:"is_completed"`
+	Priority    string     `gorm:"size:50;default:'medium'" json:"priority"` // low, medium, high, urgent
+	DueDate     *time.Time `json:"due_date,omitempty"`
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+	UserID      uint       `gorm:"not null" json:"user_id"`
+	User        User       `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
 func GetMod() []interface{} {
 	return []interface{}{
 		&User{},
@@ -322,5 +368,8 @@ func GetMod() []interface{} {
 		&Newsletter{},
 		&Contact{},
 		&OAuthProfile{},
+		&Product{},
+		&OrderItem{},
+		&Todo{},
 	}
 }

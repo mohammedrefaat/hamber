@@ -13,9 +13,10 @@ import (
 )
 
 type Service struct {
-	Router  *gin.Engine
-	stStore *stores.DbStore
-	config  *config.Config
+	Router   *gin.Engine
+	StStore  *stores.DbStore
+	config   *config.Config
+	photosrv *db.PhotoSrv
 }
 
 func NewServer() (*Service, error) {
@@ -29,20 +30,27 @@ func NewServer() (*Service, error) {
 
 	// Get the DSN from config
 	dsn := config.GetDSN()
-
+	err = InitPhotoService(config)
+	if err != nil {
+		return nil, err
+	}
 	// Connect to the database
 	database, err := db.OpenDbConn(dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	stStore, err := stores.NewDbStore(database)
+	StStore, err := stores.NewDbStore(database)
 	if err != nil {
 		return nil, err
 	}
 
 	// Set the global store for controllers
-	controllers.SetStore(stStore)
+	controllers.SetStore(&controllers.GlobalService{
+		StStore:  StStore,
+		Config:   config,
+		PhotoSrv: GetPhotoService(),
+	})
 
 	router, err := GetRouter(config)
 	if err != nil {
@@ -50,9 +58,10 @@ func NewServer() (*Service, error) {
 	}
 
 	serv := Service{
-		stStore: stStore,
-		Router:  router,
-		config:  config,
+		StStore:  StStore,
+		Router:   router,
+		config:   config,
+		photosrv: GetPhotoService(),
 	}
 
 	return &serv, nil
@@ -73,4 +82,33 @@ func (c *Service) Run() {
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatal("Server failed to start:", err)
 	}
+}
+
+var GlobalPhotoService *db.PhotoSrv
+
+// InitPhotoService initializes the global photo service
+func InitPhotoService(cfg *config.Config) error {
+	// Initialize MinIO photo service
+	photoService, err := db.NewPhotoService(
+		cfg.Storage.MinIO.Endpoint,
+		cfg.Storage.MinIO.AccessKey,
+		cfg.Storage.MinIO.SecretKey,
+		cfg.Storage.MinIO.Bucket,
+		cfg.Storage.MinIO.UseSSL,
+	)
+	if err != nil {
+		return err
+	}
+
+	GlobalPhotoService = photoService
+	log.Println("✓ Photo service initialized successfully")
+	return nil
+}
+
+// GetPhotoService returns the global photo service instance
+func GetPhotoService() *db.PhotoSrv {
+	if GlobalPhotoService == nil {
+		log.Fatal("Photo service not initialized. Call InitPhotoService first.")
+	}
+	return GlobalPhotoService
 }

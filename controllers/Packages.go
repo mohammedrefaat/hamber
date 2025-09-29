@@ -9,7 +9,7 @@ import (
 
 // GetAllPackages returns all active packages
 func GetAllPackages(c *gin.Context) {
-	packages, err := globalStore.GetAllPackages()
+	packages, err := globalStore.StStore.GetAllPackages()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch packages",
@@ -33,7 +33,7 @@ func GetPackage(c *gin.Context) {
 		return
 	}
 
-	pkg, err := globalStore.GetPackage(uint(id))
+	pkg, err := globalStore.StStore.GetPackage(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Package not found",

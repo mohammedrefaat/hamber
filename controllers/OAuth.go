@@ -254,14 +254,14 @@ func AppleCallback(c *gin.Context) {
 // Handle OAuth user authentication/registration
 func handleOAuthUser(provider, providerID, email, name, picture, accessToken, refreshToken string) (*AuthResponse, error) {
 	// Check if OAuth profile exists
-	oauthProfile, err := globalStore.GetOAuthProfile(provider, providerID)
+	oauthProfile, err := globalStore.StStore.GetOAuthProfile(provider, providerID)
 	if err == nil && oauthProfile != nil {
 		// User exists, update tokens and login
 		oauthProfile.AccessToken = accessToken
 		oauthProfile.RefreshToken = refreshToken
-		globalStore.UpdateOAuthProfile(oauthProfile)
+		globalStore.StStore.UpdateOAuthProfile(oauthProfile)
 
-		user, err := globalStore.GetUser(oauthProfile.UserID)
+		user, err := globalStore.StStore.GetUser(oauthProfile.UserID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get user: %v", err)
 		}
@@ -285,7 +285,7 @@ func handleOAuthUser(provider, providerID, email, name, picture, accessToken, re
 	}
 
 	// Check if user exists by email
-	existingUser, err := globalStore.GetUserByEmail(email)
+	existingUser, err := globalStore.StStore.GetUserByEmail(email)
 	if err != nil {
 		// User doesn't exist, create new user
 		newUser := dbmodels.User{
@@ -300,7 +300,7 @@ func handleOAuthUser(provider, providerID, email, name, picture, accessToken, re
 			Avatar:            picture,
 		}
 
-		if err := globalStore.CreateUser(&newUser); err != nil {
+		if err := globalStore.StStore.CreateUser(&newUser); err != nil {
 			return nil, fmt.Errorf("failed to create user: %v", err)
 		}
 
@@ -316,7 +316,7 @@ func handleOAuthUser(provider, providerID, email, name, picture, accessToken, re
 			RefreshToken: refreshToken,
 		}
 
-		if err := globalStore.CreateOAuthProfile(&profile); err != nil {
+		if err := globalStore.StStore.CreateOAuthProfile(&profile); err != nil {
 			return nil, fmt.Errorf("failed to create OAuth profile: %v", err)
 		}
 
@@ -350,14 +350,14 @@ func handleOAuthUser(provider, providerID, email, name, picture, accessToken, re
 		RefreshToken: refreshToken,
 	}
 
-	if err := globalStore.CreateOAuthProfile(&profile); err != nil {
+	if err := globalStore.StStore.CreateOAuthProfile(&profile); err != nil {
 		return nil, fmt.Errorf("failed to create OAuth profile: %v", err)
 	}
 
 	// Update user avatar if not set
 	if existingUser.Avatar == "" && picture != "" {
 		existingUser.Avatar = picture
-		globalStore.UpdateUser(existingUser)
+		globalStore.StStore.UpdateUser(existingUser)
 	}
 
 	// Generate JWT tokens

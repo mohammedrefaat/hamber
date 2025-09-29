@@ -33,10 +33,10 @@ func GetAllBlogsAdmin(c *gin.Context) {
 			})
 			return
 		}
-		blogs, total, err = globalStore.GetBlogsByAuthor(uint(id), page, limit)
+		blogs, total, err = globalStore.StStore.GetBlogsByAuthor(uint(id), page, limit)
 	} else {
 		// Get all blogs (including unpublished)
-		blogs, total, err = globalStore.GetBlogs(page, limit, false)
+		blogs, total, err = globalStore.StStore.GetBlogs(page, limit, false)
 	}
 
 	if err != nil {
@@ -56,7 +56,7 @@ func GetAllBlogsAdmin(c *gin.Context) {
 
 // GetBlogAnalytics returns blog statistics for admin dashboard
 func GetBlogAnalytics(c *gin.Context) {
-	analytics, err := globalStore.GetBlogAnalytics()
+	analytics, err := globalStore.StStore.GetBlogAnalytics()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch blog analytics",

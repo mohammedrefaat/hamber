@@ -45,7 +45,7 @@ func SubscribeNewsletter(c *gin.Context) {
 	}
 
 	// Check if email already subscribed
-	existing, err := globalStore.GetNewsletterByEmail(req.Email)
+	existing, err := globalStore.StStore.GetNewsletterByEmail(req.Email)
 	if err == nil && existing != nil {
 		if existing.IsActive {
 			c.JSON(http.StatusConflict, gin.H{
@@ -56,7 +56,7 @@ func SubscribeNewsletter(c *gin.Context) {
 			// Reactivate subscription
 			existing.IsActive = true
 			existing.UnsubscribedAt = nil
-			if err := globalStore.UpdateNewsletter(existing); err != nil {
+			if err := globalStore.StStore.UpdateNewsletter(existing); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "Failed to reactivate newsletter subscription",
 				})
@@ -76,7 +76,7 @@ func SubscribeNewsletter(c *gin.Context) {
 		IsActive: true,
 	}
 
-	if err := globalStore.CreateNewsletter(&newsletter); err != nil {
+	if err := globalStore.StStore.CreateNewsletter(&newsletter); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to subscribe to newsletter",
 		})
@@ -99,7 +99,7 @@ func UnsubscribeNewsletter(c *gin.Context) {
 		return
 	}
 
-	newsletter, err := globalStore.GetNewsletterByEmail(req.Email)
+	newsletter, err := globalStore.StStore.GetNewsletterByEmail(req.Email)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Email not found in newsletter subscriptions",
@@ -115,7 +115,7 @@ func UnsubscribeNewsletter(c *gin.Context) {
 	}
 
 	// Deactivate subscription
-	if err := globalStore.UnsubscribeNewsletter(req.Email); err != nil {
+	if err := globalStore.StStore.UnsubscribeNewsletter(req.Email); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to unsubscribe from newsletter",
 		})
@@ -154,7 +154,7 @@ func SubmitContactForm(c *gin.Context) {
 		Replied: false,
 	}
 
-	if err := globalStore.CreateContact(&contact); err != nil {
+	if err := globalStore.StStore.CreateContact(&contact); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to submit contact form",
 		})
@@ -191,7 +191,7 @@ func GetAllNewsletterSubscriptions(c *gin.Context) {
 		isActive = &val
 	}
 
-	subscriptions, total, err := globalStore.GetNewsletterSubscriptions(page, limit, isActive)
+	subscriptions, total, err := globalStore.StStore.GetNewsletterSubscriptions(page, limit, isActive)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch newsletter subscriptions",
@@ -220,7 +220,7 @@ func GetAllContacts(c *gin.Context) {
 		limit = 20
 	}
 
-	contacts, total, err := globalStore.GetContacts(page, limit, unreadOnly)
+	contacts, total, err := globalStore.StStore.GetContacts(page, limit, unreadOnly)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch contacts",
@@ -247,7 +247,7 @@ func MarkContactAsRead(c *gin.Context) {
 		return
 	}
 
-	if err := globalStore.MarkContactAsRead(uint(id)); err != nil {
+	if err := globalStore.StStore.MarkContactAsRead(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to mark contact as read",
 		})
@@ -270,7 +270,7 @@ func MarkContactAsReplied(c *gin.Context) {
 		return
 	}
 
-	if err := globalStore.MarkContactAsReplied(uint(id)); err != nil {
+	if err := globalStore.StStore.MarkContactAsReplied(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to mark contact as replied",
 		})
@@ -293,7 +293,7 @@ func DeleteContact(c *gin.Context) {
 		return
 	}
 
-	if err := globalStore.DeleteContact(uint(id)); err != nil {
+	if err := globalStore.StStore.DeleteContact(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete contact",
 		})
@@ -307,7 +307,7 @@ func DeleteContact(c *gin.Context) {
 
 // Get newsletter statistics (Admin only)
 func GetNewsletterStats(c *gin.Context) {
-	stats, err := globalStore.GetNewsletterStats()
+	stats, err := globalStore.StStore.GetNewsletterStats()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch newsletter statistics",
@@ -322,7 +322,7 @@ func GetNewsletterStats(c *gin.Context) {
 
 // Get contact statistics (Admin only)
 func GetContactStats(c *gin.Context) {
-	stats, err := globalStore.GetContactStats()
+	stats, err := globalStore.StStore.GetContactStats()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch contact statistics",

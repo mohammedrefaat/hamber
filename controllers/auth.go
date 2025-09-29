@@ -5,17 +5,25 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	config "github.com/mohammedrefaat/hamber/Config"
 	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
+	db "github.com/mohammedrefaat/hamber/Db"
 	"github.com/mohammedrefaat/hamber/stores"
 	"github.com/mohammedrefaat/hamber/utils"
 )
 
 // Global store variable - this should be properly initialized
-var globalStore *stores.DbStore
+var globalStore *GlobalService
+
+type GlobalService struct {
+	StStore  *stores.DbStore
+	Config   *config.Config
+	PhotoSrv *db.PhotoSrv
+}
 
 // SetStore initializes the global store
-func SetStore(store *stores.DbStore) {
-	globalStore = store
+func SetStore(Service *GlobalService) {
+	globalStore = Service
 }
 
 type LoginRequest struct {
@@ -59,7 +67,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	user, err := globalStore.Login(req.Email, req.Password)
+	user, err := globalStore.StStore.Login(req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "invalid email or password",
@@ -115,7 +123,7 @@ func Register(c *gin.Context) {
 		IS_ACTIVE: true,
 	}
 
-	if err := globalStore.CreateUser(&user); err != nil {
+	if err := globalStore.StStore.CreateUser(&user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to create user: " + err.Error(),
 		})
@@ -123,7 +131,7 @@ func Register(c *gin.Context) {
 	}
 
 	// Get user with role for JWT generation
-	userWithRole, err := globalStore.GetUserWithRole(user.ID)
+	userWithRole, err := globalStore.StStore.GetUserWithRole(user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to get user details",
@@ -171,7 +179,7 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	user, err := globalStore.GetUserWithRole(claims.UserID)
+	user, err := globalStore.StStore.GetUserWithRole(claims.UserID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "User not found",
@@ -204,7 +212,7 @@ func RefreshToken(c *gin.Context) {
 func GetProfile(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	user, err := globalStore.GetUser(userID.(uint))
+	user, err := globalStore.StStore.GetUser(userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "User not found",
@@ -218,7 +226,7 @@ func GetProfile(c *gin.Context) {
 func UpdateProfile(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	user, err := globalStore.GetUser(userID.(uint))
+	user, err := globalStore.StStore.GetUser(userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "User not found",
@@ -254,7 +262,7 @@ func UpdateProfile(c *gin.Context) {
 		user.Location = updateData.Location
 	}
 
-	if err := globalStore.UpdateUser(user); err != nil {
+	if err := globalStore.StStore.UpdateUser(user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update user",
 		})
@@ -280,7 +288,7 @@ func GetUserPermissions(c *gin.Context) {
 	claims, _ := c.Get("claims")
 
 	// Get user permissions from database
-	permissions, err := globalStore.GetUserPermissions(userID.(uint))
+	permissions, err := globalStore.StStore.GetUserPermissions(userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch user permissions",
@@ -320,7 +328,7 @@ func GetAllUsers(c *gin.Context) {
 		limit = 20
 	}
 
-	users, total, err := globalStore.GetAllUsers(page, limit)
+	users, total, err := globalStore.StStore.GetAllUsers(page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch users",
@@ -346,7 +354,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := globalStore.DeleteUser(uint(id)); err != nil {
+	if err := globalStore.StStore.DeleteUser(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to delete user",
 		})
@@ -382,7 +390,7 @@ func AssignRole(c *gin.Context) {
 		return
 	}
 
-	if err := globalStore.AssignRoleToUser(uint(id), req.RoleID); err != nil {
+	if err := globalStore.StStore.AssignRoleToUser(uint(id), req.RoleID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to assign role to user",
 		})
@@ -416,7 +424,7 @@ func RemoveRole(c *gin.Context) {
 		return
 	}
 
-	if err := globalStore.RemoveRoleFromUser(uint(id), req.RoleID); err != nil {
+	if err := globalStore.StStore.RemoveRoleFromUser(uint(id), req.RoleID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to remove role from user",
 		})
@@ -430,7 +438,7 @@ func RemoveRole(c *gin.Context) {
 
 // GetAllRoles returns all available roles (Admin only)
 func GetAllRoles(c *gin.Context) {
-	roles, err := globalStore.GetAllRoles()
+	roles, err := globalStore.StStore.GetAllRoles()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch roles",
@@ -445,7 +453,7 @@ func GetAllRoles(c *gin.Context) {
 
 // GetAllPermissions returns all available permissions (Admin only)
 func GetAllPermissions(c *gin.Context) {
-	permissions, err := globalStore.GetAllPermissions()
+	permissions, err := globalStore.StStore.GetAllPermissions()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch permissions",

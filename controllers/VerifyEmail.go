@@ -36,7 +36,7 @@ func SendEmailVerification(c *gin.Context) {
 	}
 
 	// Check if email exists
-	user, err := globalStore.GetUserByEmail(req.Email)
+	user, err := globalStore.StStore.GetUserByEmail(req.Email)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Email not found",
@@ -45,7 +45,7 @@ func SendEmailVerification(c *gin.Context) {
 	}
 
 	// Generate and send verification code
-	err = globalStore.CreateEmailVerification(req.Email)
+	err = globalStore.StStore.CreateEmailVerification(req.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to send verification code",
@@ -70,7 +70,7 @@ func VerifyEmail(c *gin.Context) {
 	}
 
 	// Verify the code
-	valid, err := globalStore.VerifyEmailCode(req.Email, req.Code)
+	valid, err := globalStore.StStore.VerifyEmailCode(req.Email, req.Code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to verify code",
@@ -86,7 +86,7 @@ func VerifyEmail(c *gin.Context) {
 	}
 
 	// Update user's email verification status
-	err = globalStore.MarkEmailAsVerified(req.Email)
+	err = globalStore.StStore.MarkEmailAsVerified(req.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update email verification status",
@@ -110,7 +110,7 @@ func ForgotPassword(c *gin.Context) {
 	}
 
 	// Check if email exists
-	_, err := globalStore.GetUserByEmail(req.Email)
+	_, err := globalStore.StStore.GetUserByEmail(req.Email)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Email not found",
@@ -119,7 +119,7 @@ func ForgotPassword(c *gin.Context) {
 	}
 
 	// Generate and send reset code
-	err = globalStore.CreatePasswordReset(req.Email)
+	err = globalStore.StStore.CreatePasswordReset(req.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to send reset code",
@@ -143,7 +143,7 @@ func ResetPassword(c *gin.Context) {
 	}
 
 	// Verify the reset code
-	valid, err := globalStore.VerifyPasswordResetCode(req.Email, req.Code)
+	valid, err := globalStore.StStore.VerifyPasswordResetCode(req.Email, req.Code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to verify reset code",
@@ -159,7 +159,7 @@ func ResetPassword(c *gin.Context) {
 	}
 
 	// Reset the password
-	err = globalStore.ResetPassword(req.Email, req.NewPassword)
+	err = globalStore.StStore.ResetPassword(req.Email, req.NewPassword)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to reset password",

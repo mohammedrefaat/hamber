@@ -3,11 +3,15 @@ package utils
 import (
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 	config "github.com/mohammedrefaat/hamber/Config"
+	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
 	models "github.com/mohammedrefaat/hamber/DB_models"
+	"github.com/mohammedrefaat/hamber/stores"
 )
 
 // Global config variable - will be set from main
@@ -135,5 +139,65 @@ func GetUserPermissions(claims *JWTClaim) []string {
 		return []string{"UPDATE_PROFILE", "CREATE_BLOG", "VIEW_OWN_BLOG", "UPLOAD_PHOTOS"}
 	default:
 		return []string{}
+	}
+}
+
+// GetUserFromJWT extracts user data from JWT token
+func GetUserFromJWT(c *gin.Context, store *stores.DbStore) (*dbmodels.User, error) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return nil, errors.New("Authorization header missing")
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader {
+		return nil, errors.New("Invalid authorization format")
+	}
+
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaim{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte("your-secret-key"), nil // استخدم المفتاح السري الخاص بك
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*JWTClaim); ok && token.Valid {
+		return store.GetUserWithRole(claims.UserID)
+	}
+
+	return nil, errors.New("Invalid token")
+}
+
+// GetUserIDFromContext gets user ID from gin context
+func GetUserIDFromContext(c *gin.Context) (uint, error) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return 0, errors.New("User ID not found in context")
+	}
+
+	if id, ok := userID.(uint); ok {
+		return id, nil
+	}
+
+	return 0, errors.New("Invalid user ID type")
+}
+
+// Middleware to extract user from JWT
+func JWTAuthMiddleware(store *stores.DbStore) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, err := GetUserFromJWT(c, store)
+		if err != nil {
+			c.JSON(401, gin.H{"error": "Unauthorized", "message": err.Error()})
+			c.Abort()
+			return
+		}
+
+		c.Set("user", user)
+		c.Set("user_id", user.ID)
+		c.Set("user_email", user.Email)
+		c.Set("user_name", user.Name)
+
+		c.Next()
 	}
 }

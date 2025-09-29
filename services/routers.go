@@ -10,9 +10,6 @@ import (
 func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 	router := gin.Default()
 
-	// Initialize OAuth configuration with loaded config
-	controllers.InitOAuth()
-
 	// Add CORS and Language middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.LanguageMiddleware())
@@ -92,14 +89,30 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 		protected.GET("/profile", controllers.GetProfile)
 		protected.PUT("/profile", controllers.UpdateProfile)
 
+		// Photo routes
+		photos := protected.Group("/photos")
+		{
+			// Avatar upload
+			photos.POST("/avatar", controllers.UploadAvatarPhoto)
+
+			// Get presigned URL for private photos
+			photos.GET("/presigned-url", controllers.GetPhotoPresignedURL)
+		}
+
 		// Protected blog routes
 		protectedBlogs := protected.Group("/blogs")
 		{
-			protectedBlogs.POST("/", controllers.CreateBlog)
+			protectedBlogs.POST("/", controllers.CreateBlogWithPhotos)
 			protectedBlogs.PUT("/:id", controllers.UpdateBlog)
 			protectedBlogs.DELETE("/:id", controllers.DeleteBlog)
-			protectedBlogs.POST("/:id/photos", controllers.UploadBlogPhoto)
+
+			// Photo management for blogs
+			protectedBlogs.POST("/:id/photos", controllers.UploadBlogPhotoV2)
+			protectedBlogs.DELETE("/:id/photos", controllers.DeleteBlogPhoto)
 		}
+
+		// User permissions
+		protected.GET("/permissions", controllers.GetUserPermissions)
 
 		// Admin only routes
 		admin := protected.Group("/admin")
@@ -108,6 +121,12 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 			// User management
 			admin.GET("/users", controllers.GetAllUsers)
 			admin.DELETE("/users/:id", controllers.DeleteUser)
+
+			// Role management
+			admin.GET("/roles", controllers.GetAllRoles)
+			admin.GET("/permissions", controllers.GetAllPermissions)
+			admin.POST("/users/:id/roles", controllers.AssignRole)
+			admin.DELETE("/users/:id/roles", controllers.RemoveRole)
 
 			// Blog management
 			admin.GET("/blogs", controllers.GetAllBlogsAdmin) // All blogs including unpublished
@@ -129,7 +148,48 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 				adminContact.DELETE("/:id", controllers.DeleteContact)
 				adminContact.GET("/stats", controllers.GetContactStats)
 			}
+
+			// Photo statistics
+			admin.GET("/photos/stats", controllers.GetPhotoStats)
 		}
+	}
+	/*// User routes (protected)
+	user := protected.Group("/user")
+	{
+		user.GET("/me", controllers.GetCurrentUser)
+		user.GET("/profile", controllers.GetUserProfile)
+	}*/
+
+	// Product routes (protected)
+	products := protected.Group("/products")
+	{
+		products.POST("/", controllers.CreateProduct)
+		products.GET("/", controllers.GetProducts)
+		products.GET("/:id", controllers.GetProduct)
+		products.PUT("/:id", controllers.UpdateProduct)
+		products.DELETE("/:id", controllers.DeleteProduct)
+		products.PATCH("/:id/quantity", controllers.UpdateProductQuantity)
+	}
+
+	// Order routes (protected)
+	orders := protected.Group("/orders")
+	{
+		orders.POST("/", controllers.CreateOrder)
+		orders.GET("/", controllers.GetOrders)
+		orders.GET("/:id", controllers.GetOrder)
+		orders.PATCH("/:id/status", controllers.UpdateOrderStatus)
+		orders.PATCH("/:id/cancel", controllers.CancelOrder)
+	}
+
+	// To do routes (protected)
+	todos := protected.Group("/todos")
+	{
+		todos.POST("/", controllers.CreateTodo)
+		todos.GET("/", controllers.GetTodos)
+		todos.GET("/:id", controllers.GetTodo)
+		todos.PUT("/:id", controllers.UpdateTodo)
+		todos.DELETE("/:id", controllers.DeleteTodo)
+		todos.PATCH("/:id/toggle", controllers.ToggleTodoComplete)
 	}
 
 	return router, nil
