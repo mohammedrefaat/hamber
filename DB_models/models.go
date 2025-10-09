@@ -305,22 +305,24 @@ type OAuthProfile struct {
 
 // Product model for e-commerce products
 type Product struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	Name        string    `gorm:"size:255;not null" json:"name"`
-	Description string    `gorm:"type:text" json:"description"`
-	Price       float64   `gorm:"not null" json:"price"`
-	Quantity    int       `gorm:"not null;default:0" json:"quantity"`
-	SKU         string    `gorm:"size:100;unique;not null" json:"sku"`
-	Category    string    `gorm:"size:255" json:"category"`
-	Brand       string    `gorm:"size:255" json:"brand"`
-	Images      string    `gorm:"type:text" json:"images"` // JSON array of image URLs
-	IsActive    bool      `gorm:"default:true" json:"is_active"`
-	Weight      float64   `gorm:"default:0" json:"weight"`
-	Tags        string    `gorm:"type:text" json:"tags"` // JSON array of tags
-	UserID      uint      `gorm:"not null" json:"user_id"`
-	User        User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	Name          string    `gorm:"size:255;not null" json:"name"`
+	Description   string    `gorm:"type:text" json:"description"`
+	Price         float64   `gorm:"not null" json:"price"`
+	DiscountPrice float64   `json:"discount_price,omitempty"`
+	Quantity      int       `gorm:"not null;default:0" json:"quantity"`
+	SKU           string    `gorm:"size:100;unique;not null" json:"sku"`
+	Category      string    `gorm:"size:255" json:"category"`
+	Brand         string    `gorm:"size:255" json:"brand"`
+	Images        string    `gorm:"type:text" json:"images"` // JSON array of image URLs
+	IsActive      bool      `gorm:"default:true" json:"is_active"`
+	Weight        float64   `gorm:"default:0" json:"weight"`
+	Tags          string    `gorm:"type:text" json:"tags"` // JSON array of tags
+	UserID        uint      `gorm:"not null" json:"user_id"`
+	User          User      `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	Favorite      bool      `json:"favorite,omitempty"`
 }
 
 // Enhanced Order model
