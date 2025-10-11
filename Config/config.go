@@ -27,6 +27,7 @@ type Config struct {
 	JWT       JWTConfig       `yaml:"jwt"`
 	Email     EmailConfig     `yaml:"email"`
 	Storage   StorageConfig   `yaml:"storage"`
+	Payment   PaymentConfig   `yaml:"payment"`
 }
 
 type DatabaseConfig struct {
@@ -104,6 +105,46 @@ type OAuthProviderConfig struct {
 	RedirectURL  string   `yaml:"redirect_url"`
 	Scopes       []string `yaml:"scopes"`
 	Enabled      bool     `yaml:"enabled"`
+}
+
+type PaymentConfig struct {
+	Fawry  FawryConfig  `yaml:"fawry"`
+	Paymob PaymobConfig `yaml:"paymob"`
+}
+
+type FawryConfig struct {
+	MerchantCode string `yaml:"merchant_code"`
+	SecurityKey  string `yaml:"security_key"`
+	APIURL       string `yaml:"api_url"`
+	CallbackURL  string `yaml:"callback_url"`
+	Enabled      bool   `yaml:"enabled"`
+}
+
+type PaymobConfig struct {
+	APIKey        string `yaml:"api_key"`
+	IntegrationID string `yaml:"integration_id"`
+	IframeID      string `yaml:"iframe_id"`
+	HMACSecret    string `yaml:"hmac_secret"`
+	APIURL        string `yaml:"api_url"`
+	CallbackURL   string `yaml:"callback_url"`
+	Enabled       bool   `yaml:"enabled"`
+}
+
+// Add getter methods
+func (c *Config) GetFawryConfig() FawryConfig {
+	return c.Payment.Fawry
+}
+
+func (c *Config) GetPaymobConfig() PaymobConfig {
+	return c.Payment.Paymob
+}
+
+func (c *Config) IsFawryEnabled() bool {
+	return c.Payment.Fawry.Enabled
+}
+
+func (c *Config) IsPaymobEnabled() bool {
+	return c.Payment.Paymob.Enabled
 }
 
 // Global config instance

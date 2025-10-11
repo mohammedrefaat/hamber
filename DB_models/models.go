@@ -352,6 +352,101 @@ type Todo struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
+// Payment model for tracking payment transactions
+type Payment struct {
+	ID              uint          `gorm:"primaryKey" json:"id"`
+	UserID          uint          `gorm:"not null" json:"user_id"`
+	User            User          `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	PackageID       uint          `gorm:"not null" json:"package_id"`
+	Package         Package       `gorm:"foreignKey:PackageID" json:"package,omitempty"`
+	Amount          float64       `gorm:"not null" json:"amount"`
+	Currency        string        `gorm:"size:10;default:'EGP'" json:"currency"`
+	PaymentMethod   string        `gorm:"size:50;not null" json:"payment_method"` // 'fawry', 'paymob'
+	PaymentStatus   PaymentStatus `gorm:"not null;default:0" json:"payment_status"`
+	TransactionID   string        `gorm:"size:255" json:"transaction_id"`
+	ReferenceNumber string        `gorm:"size:255;unique" json:"reference_number"` // Fawry reference
+	PaymobOrderID   string        `gorm:"size:255" json:"paymob_order_id"`
+	PaymentData     string        `gorm:"type:text" json:"payment_data"` // JSON for additional data
+	ExpiresAt       *time.Time    `json:"expires_at,omitempty"`
+	PaidAt          *time.Time    `json:"paid_at,omitempty"`
+	CreatedAt       time.Time     `json:"created_at"`
+	UpdatedAt       time.Time     `json:"updated_at"`
+}
+
+type PaymentStatus int32
+
+const (
+	PaymentStatus_PENDING   PaymentStatus = 0
+	PaymentStatus_PAID      PaymentStatus = 1
+	PaymentStatus_FAILED    PaymentStatus = 2
+	PaymentStatus_CANCELLED PaymentStatus = 3
+	PaymentStatus_EXPIRED   PaymentStatus = 4
+	PaymentStatus_REFUNDED  PaymentStatus = 5
+)
+
+var (
+	PaymentStatus_name = map[int32]string{
+		0: "PENDING",
+		1: "PAID",
+		2: "FAILED",
+		3: "CANCELLED",
+		4: "EXPIRED",
+		5: "REFUNDED",
+	}
+	PaymentStatus_value = map[string]int32{
+		"PENDING":   0,
+		"PAID":      1,
+		"FAILED":    2,
+		"CANCELLED": 3,
+		"EXPIRED":   4,
+		"REFUNDED":  5,
+	}
+)
+
+func (x PaymentStatus) String() string {
+	return PaymentStatus_name[int32(x)]
+}
+
+// PackageChange model to track package upgrade/downgrade requests
+type PackageChange struct {
+	ID           uint         `gorm:"primaryKey" json:"id"`
+	UserID       uint         `gorm:"not null" json:"user_id"`
+	User         User         `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	OldPackageID uint         `gorm:"not null" json:"old_package_id"`
+	OldPackage   Package      `gorm:"foreignKey:OldPackageID" json:"old_package,omitempty"`
+	NewPackageID uint         `gorm:"not null" json:"new_package_id"`
+	NewPackage   Package      `gorm:"foreignKey:NewPackageID" json:"new_package,omitempty"`
+	PaymentID    *uint        `json:"payment_id,omitempty"`
+	Payment      *Payment     `gorm:"foreignKey:PaymentID" json:"payment,omitempty"`
+	Status       ChangeStatus `gorm:"not null;default:0" json:"status"`
+	ChangeReason string       `gorm:"type:text" json:"change_reason,omitempty"`
+	ApprovedAt   *time.Time   `json:"approved_at,omitempty"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
+}
+
+type ChangeStatus int32
+
+const (
+	ChangeStatus_PENDING   ChangeStatus = 0
+	ChangeStatus_APPROVED  ChangeStatus = 1
+	ChangeStatus_REJECTED  ChangeStatus = 2
+	ChangeStatus_COMPLETED ChangeStatus = 3
+)
+
+var (
+	ChangeStatus_name = map[int32]string{
+		0: "PENDING",
+		1: "APPROVED",
+		2: "REJECTED",
+		3: "COMPLETED",
+	}
+)
+
+func (x ChangeStatus) String() string {
+	return ChangeStatus_name[int32(x)]
+}
+
 func GetMod() []interface{} {
 	return []interface{}{
 		&User{},
@@ -373,5 +468,7 @@ func GetMod() []interface{} {
 		&Product{},
 		&OrderItem{},
 		&Todo{},
+		&Payment{},
+		&PackageChange{},
 	}
 }

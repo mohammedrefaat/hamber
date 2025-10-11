@@ -82,3 +82,20 @@ storage:
             - width: 800
               height: 600
               suffix: _medium          # Creates filename_medium.jpg
+# Payment Integrations
+payment:
+  fawry:
+    merchant_code: "YOUR_FAWRY_MERCHANT_CODE"
+    security_key: "YOUR_FAWRY_SECURITY_KEY"
+    api_url: "https://atfawry.fawrystaging.com" # Use production URL in production
+    callback_url: "https://yourdomain.com/api/payment/fawry/callback"
+    enabled: true
+    
+  paymob:
+    api_key: "YOUR_PAYMOB_API_KEY"
+    integration_id: "YOUR_INTEGRATION_ID"
+    iframe_id: "YOUR_IFRAME_ID"
+    hmac_secret: "YOUR_HMAC_SECRET"
+    api_url: "https://accept.paymob.com/api"
+    callback_url: "https://yourdomain.com/api/payment/paymob/callback"
+    enabled: true

@@ -138,7 +138,11 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 				adminNewsletter.GET("/subscriptions", controllers.GetAllNewsletterSubscriptions)
 				adminNewsletter.GET("/stats", controllers.GetNewsletterStats)
 			}
-
+			adminPayment := admin.Group("/payments")
+			{
+				adminPayment.GET("/", controllers.GetAllPayments)
+				adminPayment.GET("/:id", controllers.GetPaymentStatus)
+			}
 			// Contact management
 			adminContact := admin.Group("/contacts")
 			{
@@ -190,6 +194,35 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 		todos.PUT("/:id", controllers.UpdateTodo)
 		todos.DELETE("/:id", controllers.DeleteTodo)
 		todos.PATCH("/:id/toggle", controllers.ToggleTodoComplete)
+	}
+
+	// Payment routes (protected)
+	payment := protected.Group("/payment")
+	{
+		// Package change request
+		payment.POST("/change-package", controllers.RequestPackageChange)
+
+		// Get payment status
+		payment.GET("/status/:id", controllers.GetPaymentStatus)
+
+		// Get user's payment history
+		payment.GET("/history", controllers.GetUserPayments)
+
+		// Get package change history
+		payment.GET("/package-changes", controllers.GetPackageChangeHistory)
+	}
+
+	// Add public payment callback routes (no authentication required)
+	// Add this in the api group (public routes):
+
+	// Payment callback routes (public - called by payment gateways)
+	paymentCallbacks := api.Group("/payment")
+	{
+		// Fawry callback
+		paymentCallbacks.POST("/fawry/callback", controllers.FawryCallback)
+
+		// Paymob callback
+		paymentCallbacks.POST("/paymob/callback", controllers.PaymobCallback)
 	}
 
 	return router, nil
