@@ -173,6 +173,7 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 		products.PUT("/:id", controllers.UpdateProduct)
 		products.DELETE("/:id", controllers.DeleteProduct)
 		products.PATCH("/:id/quantity", controllers.UpdateProductQuantity)
+		products.GET("/categories", controllers.GetProductCategories)
 	}
 
 	// Order routes (protected)

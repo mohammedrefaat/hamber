@@ -691,7 +691,7 @@ photos: [files]
   "brand": "Brand Name",
   "images": "[\"https://...\", \"https://...\"]",
   "weight": 1.5,
-  "tags": "[\"tag1\", \"tag2\"]"
+  "tags": "[\"tag1\", \"tag2\"]",
 }
 ```
 **Response:** `201 Created`
@@ -759,7 +759,7 @@ photos: [files]
 {
   "name": "Updated Product Name",
   "price": 89.99,
-  "quantity": 150
+  "quantity": 150,
 }
 ```
 **Response:** `200 OK`
@@ -794,6 +794,23 @@ photos: [files]
   "message": "Product quantity updated successfully"
 }
 ```
+### GetProductCategories
+**Endpoint:** `GET /products/categories`  
+**Authentication:** Required  
+**Request Body:**
+```json
+{
+}
+```
+**Response:** `200 OK`
+```json
+{
+  "categories": [
+    "Electronics",
+    "Clothing",
+    "Books"
+  ]
+}
 
 ---
 
@@ -867,9 +884,54 @@ photos: [files]
     "ID": 1,
     "Name": "Client Name"
   },
+  "user": {
+    "id": 1,
+    "name": "User Name",
+    "email": "user@example.com"
+  },
   "total": 199.98,
   "status": 0,
-  "created_at": "2025-10-11T10:00:00Z"
+  "created_at": "2025-10-11T10:00:00Z",
+  "updated_at": "2025-10-11T11:30:00Z",
+  "items": [
+    {
+      "id": 1,
+      "order_id": 1,
+      "product_id": 1,
+      "product": {
+        "id": 1,
+        "name": "Product Name",
+        "description": "Product Description",
+        "price": 99.99,
+        "discount_price": 89.99,
+        "quantity": 10,
+        "sku": "ABC123",
+        "category": "Electronics",
+        "brand": "Brand Name",
+        "images": "[\"image1.jpg\", \"image2.jpg\"]",
+        "is_active": true,
+        "weight": 1.5,
+        "tags": "[\"new\", \"featured\"]",
+        "user_id": 1,
+        "created_at": "2025-10-10T09:00:00Z",
+        "updated_at": "2025-10-10T09:00:00Z",
+        "favorite": false
+      },
+      "quantity": 2,
+      "price": 99.99,
+      "created_at": "2025-10-11T10:00:00Z",
+      "updated_at": "2025-10-11T10:00:00Z"
+    }
+  ],
+  "address": "123 Main St, City, State 12345",
+  "phone": "+1234567890",
+  "notes": "Please deliver after 5 PM",
+  "payment_status": "paid",
+  "payment_amount": 199.98,
+  "payment_method_id": 1,
+  "payment_method_desc": "Credit Card",
+  "payment_date": "2025-10-11T10:15:00Z",
+  "payment_ref": "PAY-REF-123456"
 }
 ```
 

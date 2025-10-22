@@ -1,6 +1,7 @@
 package stores
 
 import (
+	"context"
 	"net/http"
 
 	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
@@ -90,4 +91,20 @@ func (store *DbStore) UpdateProductQuantity(id uint, quantity int) error {
 	return store.db.Model(&dbmodels.Product{}).
 		Where("id = ?", id).
 		Update("quantity", quantity).Error
+}
+
+// GetProductCategories(c.Request.Context(), userID)
+func (store *DbStore) GetProductCategories(ctx context.Context, userID uint) ([]string, error) {
+	var categories []string
+	query := store.db.Model(&dbmodels.Product{}).Distinct().Pluck("category", &categories)
+	if userID > 0 {
+		query = query.Where("user_id = ?", userID)
+	}
+	if err := query.Error; err != nil {
+		return nil, &CustomError{
+			Message: "Failed to fetch categories",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	return categories, nil
 }

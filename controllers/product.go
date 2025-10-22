@@ -534,3 +534,19 @@ func convertProductToResponse(ctx context.Context, photoService *db.PhotoSrv, pr
 		DiscountPrice: product.DiscountPrice,
 	}, nil
 }
+
+func GetProductCategories(c *gin.Context) {
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	// send ctx and userID
+	categories, err := globalStore.StStore.GetProductCategories(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch categories"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"categories": categories})
+}
