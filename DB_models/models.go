@@ -155,6 +155,11 @@ type Order struct {
 	Status    OrderStatus `gorm:"not null"` // Enum as int
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	Items     []OrderItem `gorm:"foreignKey:OrderID"`
+	Address   string      `gorm:"type:text"` // Shipping address
+	Phone     string      `gorm:"size:20"`   // Shipping phone
+	Notes     string      `gorm:"type:text"` // Order notes
+
 }
 
 type Subscription struct {
