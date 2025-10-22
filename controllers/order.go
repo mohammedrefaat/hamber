@@ -3,9 +3,11 @@ package controllers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
+	"github.com/mohammedrefaat/hamber/stores"
 	"github.com/mohammedrefaat/hamber/utils"
 )
 
@@ -16,6 +18,8 @@ type CreateOrderRequest struct {
 
 // CreateOrder creates a new order
 func CreateOrder(c *gin.Context) {
+
+	//todo check if client exists
 	var req CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -156,4 +160,39 @@ func GetOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"order": order})
+}
+func UpdateOrderPayment(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		return
+	}
+
+	var req struct {
+		PaymentStatus string     `json:"payment_status" binding:"required"`
+		Amount        float64    `json:"amount" binding:"required"`
+		PaymentRef    string     `json:"payment_ref"`
+		PaymentDate   *time.Time `json:"payment_date"`
+		PaymentMethod int64      `json:"payment_method"`
+		PaymentDesc   string     `json:"payment_desc"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update order payment details
+	if err := globalStore.StStore.UpdateOrderPayment(uint(id), stores.PaymentUpdate{
+		PaymentStatus: req.PaymentStatus,
+		Amount:        req.Amount,
+		PaymentRef:    req.PaymentRef,
+		PaymentDate:   req.PaymentDate,
+		PaymentMethod: req.PaymentMethod,
+		PaymentDesc:   req.PaymentDesc,
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order payment"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Order payment updated successfully"})
 }

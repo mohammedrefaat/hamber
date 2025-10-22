@@ -2,6 +2,7 @@ package stores
 
 import (
 	"net/http"
+	"time"
 
 	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
 )
@@ -68,4 +69,26 @@ func (store *DbStore) CancelOrder(id uint) error {
 	return store.db.Model(&dbmodels.Order{}).
 		Where("id = ?", id).
 		Update("status", dbmodels.OrderStatus_CANCELED).Error
+}
+
+type PaymentUpdate struct {
+	PaymentStatus string     `json:"payment_status" binding:"required"`
+	Amount        float64    `json:"amount" binding:"required"`
+	PaymentRef    string     `json:"payment_ref"`
+	PaymentDate   *time.Time `json:"payment_date"`
+	PaymentMethod int64      `json:"payment_method"`
+	PaymentDesc   string     `json:"payment_desc"`
+}
+
+func (store *DbStore) UpdateOrderPayment(id uint, paymentUpdate PaymentUpdate) error {
+	return store.db.Model(&dbmodels.Order{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"payment_status": paymentUpdate.PaymentStatus,
+			"payment_amount": paymentUpdate.Amount,
+			"payment_date":   paymentUpdate.PaymentDate,
+			"payment_method": paymentUpdate.PaymentMethod,
+			"payment_desc":   paymentUpdate.PaymentDesc,
+			"payment_ref":    paymentUpdate.PaymentRef,
+		}).Error
 }
