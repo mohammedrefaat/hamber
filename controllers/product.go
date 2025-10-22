@@ -265,7 +265,12 @@ func UpdateProduct(c *gin.Context) {
 	if req.Tags != "" {
 		product.Tags = req.Tags
 	}
-
+	if req.DiscountPrice >= 0 {
+		product.DiscountPrice = req.DiscountPrice
+	}
+	if req.Favorite {
+		product.Favorite = req.Favorite
+	}
 	// Handle photo updates
 	if req.Photos != nil {
 		// Delete old photos from MinIO
