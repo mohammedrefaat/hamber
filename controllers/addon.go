@@ -1,13 +1,16 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
+	db "github.com/mohammedrefaat/hamber/Db"
 	"github.com/mohammedrefaat/hamber/utils"
 )
 
@@ -43,14 +46,49 @@ func CreateAddon(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	photoService := globalStore.PhotoSrv
 	featuresJSON, _ := json.Marshal(req.Features)
+	// Upload photos to MinIO and get URLs
+	var photoURLs []string
+	if req.Photo != "" {
+		uploadedURLs, err := uploadBase64Photos(c, photoService, []string{req.Photo}, "addons-photo")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to upload photos: " + err.Error(),
+			})
+			return
+		}
+		photoURLs = uploadedURLs
+	}
+	var lgURLs []string
 
+	if req.Logo != "" {
+		uploadedURLs, err := uploadBase64Photos(c, photoService, []string{req.Logo}, "addons-logo")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to upload logo: " + err.Error(),
+			})
+			return
+		}
+		lgURLs = uploadedURLs
+	}
+
+	// Convert photo URLs to JSON string for storage
+	imagesJSON := "[]"
+	if len(photoURLs) > 0 {
+		imagesBytes, _ := json.Marshal(photoURLs)
+		imagesJSON = string(imagesBytes)
+	}
+	logoJSON := "[]"
+	if len(lgURLs) > 0 {
+		logoBytes, _ := json.Marshal(lgURLs)
+		logoJSON = string(logoBytes)
+	}
 	addon := dbmodels.Addon{
 		Title:        req.Title,
 		Description:  req.Description,
-		Logo:         req.Logo,
-		Photo:        req.Photo,
+		Logo:         logoJSON,
+		Photo:        imagesJSON,
 		Category:     req.Category,
 		PricingType:  req.PricingType,
 		BasePrice:    req.BasePrice,
@@ -90,6 +128,17 @@ func GetAddons(c *gin.Context) {
 		return
 	}
 
+	// get phto and logo
+	for i := range addons {
+		convertedAddon, err := convertAddnToResponse(c, globalStore.PhotoSrv, &addons[i])
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process addon photos"})
+			return
+		}
+		addons[i] = *convertedAddon
+
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"addons":      addons,
 		"total":       total,
@@ -111,12 +160,16 @@ func GetAddon(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Add-on not found"})
 		return
 	}
-
+	convertedAddon, err := convertAddnToResponse(c, globalStore.PhotoSrv, addon)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process addon photos"})
+		return
+	}
 	// Get pricing tiers
-	tiers, _ := globalStore.StStore.GetPricingTiers(addon.ID)
+	tiers, _ := globalStore.StStore.GetPricingTiers(convertedAddon.ID)
 
 	c.JSON(http.StatusOK, gin.H{
-		"addon": addon,
+		"addon": convertedAddon,
 		"tiers": tiers,
 	})
 }
@@ -512,4 +565,55 @@ func GetUsageLogs(c *gin.Context) {
 		"limit":       limit,
 		"total_pages": (int(total) + limit - 1) / limit,
 	})
+}
+
+func convertAddnToResponse(ctx context.Context, photoService *db.PhotoSrv, addon *dbmodels.Addon) (*dbmodels.Addon, error) {
+	var photoURLs []string
+	if addon.Photo != "" && addon.Photo != "[]" {
+		json.Unmarshal([]byte(addon.Photo), &photoURLs)
+	}
+
+	// Convert photo URLs to base64
+	var base64Photos string
+	for _, url := range photoURLs {
+		base64Photo, err := downloadPhotoAsBase64(ctx, photoService, url)
+		if err != nil {
+			fmt.Println("Warning: Failed to convert photo to base64: %v\n", err)
+			continue
+		}
+		base64Photos = base64Photo
+		break
+	}
+	var logoURLs []string
+	if addon.Logo != "" && addon.Logo != "[]" {
+		json.Unmarshal([]byte(addon.Logo), &logoURLs)
+	}
+	var base64Logo string
+	for _, url := range logoURLs {
+		base64Photo, err := downloadPhotoAsBase64(ctx, photoService, url)
+		if err != nil {
+			fmt.Println("Warning: Failed to convert photo to base64: %v\n", err)
+			continue
+		}
+		base64Logo = base64Photo
+		break
+	}
+
+	return &dbmodels.Addon{
+		ID:           addon.ID,
+		Title:        addon.Title,
+		Description:  addon.Description,
+		Logo:         base64Logo,
+		Photo:        base64Photos,
+		Category:     addon.Category,
+		PricingType:  addon.PricingType,
+		BasePrice:    addon.BasePrice,
+		Currency:     addon.Currency,
+		BillingCycle: addon.BillingCycle,
+		UsageUnit:    addon.UsageUnit,
+		Features:     addon.Features,
+		IsActive:     addon.IsActive,
+		CreatedAt:    addon.CreatedAt,
+		UpdatedAt:    addon.UpdatedAt,
+	}, nil
 }
