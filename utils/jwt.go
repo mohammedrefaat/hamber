@@ -201,3 +201,22 @@ func JWTAuthMiddleware(store *stores.DbStore) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func GetclamsFromContext(c *gin.Context) (*JWTClaim, error) {
+
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return nil, errors.New("Authorization header missing")
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader {
+		return nil, errors.New("Invalid authorization format")
+	}
+
+	claims, err := ValidateJWT(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
+}
