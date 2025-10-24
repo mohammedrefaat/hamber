@@ -18,6 +18,10 @@ https://test.hamber-hub.com/api
 - [Orders](#orders)
 - [Todos](#todos)
 - [Admin Routes](#admin-routes)
+- [Calendar Management](#calendar-management)
+- [Receipt Management](#receipt-management)
+- [Add-on Management](#add-on-management)
+- [Add-on Subscriptions](#add-on-subscriptions)
 
 ---
 
@@ -1316,4 +1320,551 @@ photos: [files]
   "unread_contacts": 10,
   "replied_contacts": 35,
   "contacts_today": 2,
-  "contacts
+  "contacts_this_week": 15,
+  "contacts_this_month": 50
+}
+
+```
+
+
+## Calendar Management
+
+### Create Calendar Event
+**Endpoint:** `POST /calendar/events`  
+**Authentication:** Required  
+**Request Body:**
+```json
+{
+  "title": "Team Meeting",
+  "description": "Weekly team sync",
+  "location": "Conference Room A",
+  "start_time": "2025-10-25T10:00:00Z",
+  "end_time": "2025-10-25T11:00:00Z",
+  "all_day": false,
+  "event_type": "meeting",
+  "color": "#FF5733",
+  "is_public": false,
+  "recurring": false,
+  "recurrence_rule": "",
+  "remind_before": 15,
+  "attendees": [
+    {
+      "user_id": 2,
+      "email": "john@example.com",
+      "name": "John Doe"
+    }
+  ]
+}
+```
+**Response:** `201 Created`
+```json
+{
+  "event": {
+    "ID": 1,
+    "user_id": 1,
+    "title": "Team Meeting",
+    "description": "Weekly team sync",
+    "location": "Conference Room A",
+    "start_time": "2025-10-25T10:00:00Z",
+    "end_time": "2025-10-25T11:00:00Z",
+    "status": "SCHEDULED"
+  },
+  "message": "Event created successfully"
+}
+```
+
+### Get User Events
+**Endpoint:** `GET /calendar/events?year=2025&month=10&include_public=true`  
+**Authentication:** Required  
+**Query Parameters:**
+- `year` (optional): Year (default: current year)
+- `month` (optional): Month 1-12 (default: current month)
+- `include_public` (optional): Include public events (default: true)
+
+**Response:** `200 OK`
+```json
+{
+  "events": [
+    {
+      "ID": 1,
+      "title": "Team Meeting",
+      "start_time": "2025-10-25T10:00:00Z",
+      "end_time": "2025-10-25T11:00:00Z",
+      "status": "SCHEDULED"
+    }
+  ],
+  "period": {
+    "year": 2025,
+    "month": 10,
+    "start": "2025-10-01T00:00:00Z",
+    "end": "2025-10-31T23:59:59Z"
+  }
+}
+```
+
+### Get Calendar Event
+**Endpoint:** `GET /calendar/events/:id`  
+**Authentication:** Required  
+**Response:** `200 OK`
+```json
+{
+  "event": {
+    "ID": 1,
+    "title": "Team Meeting",
+    "description": "Weekly team sync",
+    "location": "Conference Room A",
+    "start_time": "2025-10-25T10:00:00Z",
+    "end_time": "2025-10-25T11:00:00Z",
+    "status": "SCHEDULED"
+  },
+  "attendees": [
+    {
+      "ID": 1,
+      "event_id": 1,
+      "user_id": 2,
+      "email": "john@example.com",
+      "name": "John Doe",
+      "response_status": "pending"
+    }
+  ]
+}
+```
+
+### Update Calendar Event
+**Endpoint:** `PUT /calendar/events/:id`  
+**Authentication:** Required  
+**Request Body:** Same as Create Calendar Event
+**Response:** `200 OK`
+```json
+{
+  "event": {
+    "ID": 1,
+    "title": "Updated Meeting Title",
+    "description": "Updated description",
+    "start_time": "2025-10-25T14:00:00Z",
+    "end_time": "2025-10-25T15:00:00Z"
+  },
+  "message": "Event updated successfully"
+}
+```
+
+### Delete Calendar Event
+**Endpoint:** `DELETE /calendar/events/:id`  
+**Authentication:** Required  
+**Response:** `200 OK`
+```json
+{
+  "message": "Event deleted successfully"
+}
+```
+
+### Update Event Status
+**Endpoint:** `PATCH /calendar/events/:id/status`  
+**Authentication:** Required  
+**Request Body:**
+```json
+{
+  "status": "COMPLETED"
+}
+```
+**Valid Status Values:** `SCHEDULED`, `ONGOING`, `COMPLETED`, `CANCELLED`, `POSTPONED`
+
+**Response:** `200 OK`
+```json
+{
+  "event": {
+    "ID": 1,
+    "title": "Team Meeting",
+    "status": "COMPLETED"
+  },
+  "message": "Event status updated successfully"
+}
+```
+
+### Respond to Event Invitation
+**Endpoint:** `PATCH /calendar/attendees/:attendee_id/respond`  
+**Authentication:** Not explicitly required (attendee verification)  
+**Request Body:**
+```json
+{
+  "response": "accepted"
+}
+```
+**Valid Responses:** `accepted`, `declined`, `tentative`
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Response updated successfully"
+}
+```
+
+---
+
+## Receipt Management
+
+### Generate Order Receipt
+**Endpoint:** `POST /receipts/order/:order_id`  
+**Authentication:** Required  
+**Request Body (Optional):**
+```json
+{
+  "name": "My Company",
+  "address": "123 Business St, Cairo, Egypt",
+  "phone": "+20 123 456 7890",
+  "email": "info@mycompany.com",
+  "website": "www.mycompany.com",
+  "logo": "https://example.com/logo.png",
+  "tax_id": "TAX-123456"
+}
+```
+**Response:** `201 Created`
+```json
+{
+  "receipt": {
+    "ID": 1,
+    "order_id": 1,
+    "receipt_number": "RCP-1-1729860000",
+    "pdf_path": "./uploads/receipts/RCP-1-1729860000.pdf",
+    "template_version": "v1",
+    "generated_at": "2025-10-24T18:00:00Z"
+  },
+  "message": "Receipt generated successfully"
+}
+```
+
+### Get Order Receipt
+**Endpoint:** `GET /receipts/order/:order_id`  
+**Authentication:** Required  
+**Response:** `200 OK`
+```json
+{
+  "receipt": {
+    "ID": 1,
+    "order_id": 1,
+    "receipt_number": "RCP-1-1729860000",
+    "pdf_path": "./uploads/receipts/RCP-1-1729860000.pdf",
+    "generated_at": "2025-10-24T18:00:00Z"
+  }
+}
+```
+
+### Download Receipt PDF
+**Endpoint:** `GET /receipts/order/:order_id/download`  
+**Authentication:** Required  
+**Description:** Downloads the receipt as a PDF file  
+**Response:** PDF file with `Content-Type: application/pdf`
+
+### Get Receipt HTML
+**Endpoint:** `GET /receipts/order/:order_id/html`  
+**Authentication:** Required  
+**Description:** Returns an HTML view of the receipt  
+**Response:** HTML content with `Content-Type: text/html`
+
+---
+
+## Add-on Management
+
+### Get Add-ons (Public)
+**Endpoint:** `GET /api/addons?page=1&limit=20&category=storage&active=true`  
+**Authentication:** None  
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 20)
+- `category` (optional): Filter by category
+- `active` (optional): Filter by active status (true/false)
+
+**Response:** `200 OK`
+```json
+{
+  "addons": [
+    {
+      "ID": 1,
+      "title": "Extra Storage",
+      "description": "Additional storage space",
+      "logo": "https://example.com/storage-logo.png",
+      "category": "storage",
+      "pricing_type": "time",
+      "base_price": 50.00,
+      "currency": "EGP",
+      "billing_cycle": 30,
+      "is_active": true
+    }
+  ],
+  "total": 10,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1
+}
+```
+
+### Get Single Add-on
+**Endpoint:** `GET /api/addons/:id`  
+**Authentication:** None  
+**Response:** `200 OK`
+```json
+{
+  "addon": {
+    "ID": 1,
+    "title": "Extra Storage",
+    "description": "Additional storage space",
+    "pricing_type": "time",
+    "base_price": 50.00,
+    "currency": "EGP",
+    "billing_cycle": 30,
+    "features": ["100GB Storage", "Priority Support"]
+  },
+  "tiers": [
+    {
+      "ID": 1,
+      "addon_id": 1,
+      "min_quantity": 5,
+      "max_quantity": 10,
+      "discount_type": "percentage",
+      "discount_value": 10.0,
+      "final_price": 45.00
+    }
+  ]
+}
+```
+
+### Create Add-on (Admin)
+**Endpoint:** `POST /admin/addons/`  
+**Authentication:** Required (Admin)  
+**Request Body:**
+```json
+{
+  "title": "Extra Storage",
+  "description": "Additional storage space",
+  "logo": "https://example.com/logo.png",
+  "photo": "https://example.com/photo.png",
+  "category": "storage",
+  "pricing_type": "time",
+  "base_price": 50.00,
+  "currency": "EGP",
+  "billing_cycle": 30,
+  "usage_unit": "",
+  "features": ["100GB Storage", "Priority Support"]
+}
+```
+**Pricing Types:** `time`, `usage`
+
+**Response:** `201 Created`
+```json
+{
+  "addon": {
+    "ID": 1,
+    "title": "Extra Storage",
+    "description": "Additional storage space",
+    "pricing_type": "time",
+    "base_price": 50.00,
+    "is_active": true
+  },
+  "message": "Add-on created successfully"
+}
+```
+
+### Update Add-on (Admin)
+**Endpoint:** `PUT /admin/addons/:id`  
+**Authentication:** Required (Admin)  
+**Request Body:** Same as Create Add-on
+**Response:** `200 OK`
+```json
+{
+  "addon": {
+    "ID": 1,
+    "title": "Updated Storage Plan",
+    "base_price": 60.00
+  },
+  "message": "Add-on updated successfully"
+}
+```
+
+### Delete Add-on (Admin)
+**Endpoint:** `DELETE /admin/addons/:id`  
+**Authentication:** Required (Admin)  
+**Response:** `200 OK`
+```json
+{
+  "message": "Add-on deleted successfully"
+}
+```
+
+### Create Pricing Tier (Admin)
+**Endpoint:** `POST /admin/addons/pricing-tiers`  
+**Authentication:** Required (Admin)  
+**Request Body:**
+```json
+{
+  "addon_id": 1,
+  "min_quantity": 5,
+  "max_quantity": 10,
+  "discount_type": "percentage",
+  "discount_value": 10.0,
+  "description": "10% off for 5-10 units"
+}
+```
+**Discount Types:** `percentage`, `fixed`
+
+**Response:** `201 Created`
+```json
+{
+  "tier": {
+    "ID": 1,
+    "addon_id": 1,
+    "min_quantity": 5,
+    "max_quantity": 10,
+    "discount_type": "percentage",
+    "discount_value": 10.0,
+    "final_price": 45.00
+  },
+  "message": "Pricing tier created successfully"
+}
+```
+
+---
+
+## Add-on Subscriptions
+
+### Subscribe to Add-on
+**Endpoint:** `POST /subscriptions/`  
+**Authentication:** Required  
+**Request Body:**
+```json
+{
+  "addon_id": 1,
+  "pricing_tier_id": 1,
+  "quantity": 5,
+  "payment_method": "fawry"
+}
+```
+**Payment Methods:** `fawry`, `paymob`
+
+**Response:** `201 Created`
+```json
+{
+  "subscription": {
+    "ID": 1,
+    "user_id": 1,
+    "addon_id": 1,
+    "status": "PENDING",
+    "quantity": 5,
+    "total_price": 225.00,
+    "start_date": "2025-10-24T18:00:00Z"
+  },
+  "payment": {
+    "ID": 1,
+    "amount": 225.00,
+    "payment_status": "PENDING"
+  },
+  "message": "Subscription created. Please complete payment."
+}
+```
+
+### Get User Subscriptions
+**Endpoint:** `GET /subscriptions/?status=ACTIVE`  
+**Authentication:** Required  
+**Query Parameters:**
+- `status` (optional): Filter by status (PENDING, ACTIVE, EXPIRED, CANCELLED, SUSPENDED)
+
+**Response:** `200 OK`
+```json
+{
+  "subscriptions": [
+    {
+      "ID": 1,
+      "addon_id": 1,
+      "status": "ACTIVE",
+      "quantity": 5,
+      "total_price": 225.00,
+      "start_date": "2025-10-24T18:00:00Z",
+      "next_billing_date": "2025-11-24T18:00:00Z",
+      "usage_count": 0
+    }
+  ]
+}
+```
+
+### Get Subscription
+**Endpoint:** `GET /subscriptions/:id`  
+**Authentication:** Required  
+**Response:** `200 OK`
+```json
+{
+  "subscription": {
+    "ID": 1,
+    "user_id": 1,
+    "addon_id": 1,
+    "status": "ACTIVE",
+    "quantity": 5,
+    "total_price": 225.00,
+    "start_date": "2025-10-24T18:00:00Z",
+    "next_billing_date": "2025-11-24T18:00:00Z",
+    "usage_count": 0
+  }
+}
+```
+
+### Cancel Subscription
+**Endpoint:** `DELETE /subscriptions/:id/cancel`  
+**Authentication:** Required  
+**Response:** `200 OK`
+```json
+{
+  "message": "Subscription cancelled successfully"
+}
+```
+
+### Log Usage
+**Endpoint:** `POST /subscriptions/:id/usage`  
+**Authentication:** Required  
+**Request Body:**
+```json
+{
+  "usage_amount": 10,
+  "description": "API calls made",
+  "metadata": {
+    "endpoint": "/api/data",
+    "timestamp": "2025-10-24T18:00:00Z"
+  }
+}
+```
+**Response:** `201 Created`
+```json
+{
+  "usage_log": {
+    "ID": 1,
+    "subscription_id": 1,
+    "usage_amount": 10,
+    "description": "API calls made",
+    "created_at": "2025-10-24T18:00:00Z"
+  },
+  "message": "Usage logged successfully"
+}
+```
+
+### Get Usage Logs
+**Endpoint:** `GET /subscriptions/:id/usage?page=1&limit=20`  
+**Authentication:** Required  
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 20)
+
+**Response:** `200 OK`
+```json
+{
+  "logs": [
+    {
+      "ID": 1,
+      "subscription_id": 1,
+      "usage_amount": 10,
+      "description": "API calls made",
+      "created_at": "2025-10-24T18:00:00Z"
+    }
+  ],
+  "total": 50,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 3
+}
+```

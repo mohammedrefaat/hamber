@@ -5,11 +5,16 @@ import (
 	config "github.com/mohammedrefaat/hamber/Config"
 	middleware "github.com/mohammedrefaat/hamber/Middleware"
 	"github.com/mohammedrefaat/hamber/controllers"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	// Import your generated docs
+	//_ "github.com/mohammedrefaat/hamber/docs"
 )
 
 func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 	router := gin.Default()
-
+	// Swagger documentation route
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	// Add CORS and Language middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.LanguageMiddleware())
@@ -155,6 +160,42 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 
 			// Photo statistics
 			admin.GET("/photos/stats", controllers.GetPhotoStats)
+		}
+		// Add-on management (admin)
+		adminAddons := admin.Group("/addons")
+		{
+			adminAddons.POST("/", controllers.CreateAddon)
+			//adminAddons.PUT("/:id", controllers.UpdateAddon)
+			//adminAddons.DELETE("/:id", controllers.DeleteAddon)
+			adminAddons.POST("/pricing-tiers", controllers.CreatePricingTier)
+		}
+		addonSubscriptions := protected.Group("/subscriptions")
+		{
+			addonSubscriptions.POST("/", controllers.SubscribeToAddon)
+			addonSubscriptions.GET("/", controllers.GetUserSubscriptions)
+			addonSubscriptions.GET("/:id", controllers.GetSubscription)
+			addonSubscriptions.DELETE("/:id/cancel", controllers.CancelSubscription)
+			addonSubscriptions.POST("/:id/usage", controllers.LogUsage)
+			addonSubscriptions.GET("/:id/usage", controllers.GetUsageLogs)
+		}
+		// Calendar routes (protected)
+		calendar := protected.Group("/calendar")
+		{
+			calendar.POST("/events", controllers.CreateCalendarEvent)
+			calendar.GET("/events", controllers.GetUserEvents)
+			calendar.GET("/events/:id", controllers.GetCalendarEvent)
+			calendar.PUT("/events/:id", controllers.UpdateCalendarEvent)
+			calendar.DELETE("/events/:id", controllers.DeleteCalendarEvent)
+			calendar.PATCH("/events/:id/status", controllers.UpdateEventStatus)
+			calendar.PATCH("/attendees/:attendee_id/respond", controllers.RespondToInvitation)
+		}
+		// Receipt routes (protected)
+		receipts := protected.Group("/receipts")
+		{
+			receipts.POST("/order/:order_id", controllers.GenerateOrderReceipt)
+			receipts.GET("/order/:order_id", controllers.GetOrderReceipt)
+			receipts.GET("/order/:order_id/download", controllers.DownloadReceipt)
+			receipts.GET("/order/:order_id/html", controllers.GetReceiptHTML)
 		}
 	}
 	/*// User routes (protected)
