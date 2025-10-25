@@ -98,3 +98,98 @@ func (store *DbStore) UpdateAttendeeResponse(attendeeID uint, status string) err
 		Where("id = ?", attendeeID).
 		Update("response_status", status).Error
 }
+
+// ========== ADMIN CALENDAR FUNCTIONS ==========
+
+func (store *DbStore) GetAllCalendarEvents(page, limit int, eventType, status string) ([]dbmodels.CalendarEvent, int64, error) {
+	var events []dbmodels.CalendarEvent
+	var total int64
+
+	query := store.db.Model(&dbmodels.CalendarEvent{})
+
+	if eventType != "" {
+		query = query.Where("event_type = ?", eventType)
+	}
+	if status != "" {
+		statusMap := map[string]dbmodels.EventStatus{
+			"SCHEDULED": dbmodels.EventStatus_SCHEDULED,
+			"ONGOING":   dbmodels.EventStatus_ONGOING,
+			"COMPLETED": dbmodels.EventStatus_COMPLETED,
+			"CANCELLED": dbmodels.EventStatus_CANCELLED,
+			"POSTPONED": dbmodels.EventStatus_POSTPONED,
+		}
+		if s, ok := statusMap[status]; ok {
+			query = query.Where("status = ?", s)
+		}
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to count events",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	offset := (page - 1) * limit
+	if err := query.Preload("User").
+		Offset(offset).Limit(limit).
+		Order("start_time DESC").
+		Find(&events).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to fetch events",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return events, total, nil
+}
+
+func (store *DbStore) GetCalendarStatistics() (map[string]interface{}, error) {
+	stats := make(map[string]interface{})
+
+	// Total events
+	var totalEvents int64
+	store.db.Model(&dbmodels.CalendarEvent{}).Count(&totalEvents)
+	stats["total_events"] = totalEvents
+
+	// Public events
+	var publicEvents int64
+	store.db.Model(&dbmodels.CalendarEvent{}).Where("is_public = ?", true).Count(&publicEvents)
+	stats["public_events"] = publicEvents
+
+	// Events by status
+	statusCounts := make(map[string]int64)
+	statuses := []string{"SCHEDULED", "ONGOING", "COMPLETED", "CANCELLED", "POSTPONED"}
+	for _, status := range statuses {
+		var count int64
+		statusMap := map[string]dbmodels.EventStatus{
+			"SCHEDULED": dbmodels.EventStatus_SCHEDULED,
+			"ONGOING":   dbmodels.EventStatus_ONGOING,
+			"COMPLETED": dbmodels.EventStatus_COMPLETED,
+			"CANCELLED": dbmodels.EventStatus_CANCELLED,
+			"POSTPONED": dbmodels.EventStatus_POSTPONED,
+		}
+		store.db.Model(&dbmodels.CalendarEvent{}).Where("status = ?", statusMap[status]).Count(&count)
+		statusCounts[status] = count
+	}
+	stats["by_status"] = statusCounts
+
+	// Events by type
+	var typeCounts []map[string]interface{}
+	store.db.Model(&dbmodels.CalendarEvent{}).
+		Select("event_type, COUNT(*) as count").
+		Group("event_type").
+		Scan(&typeCounts)
+	stats["by_type"] = typeCounts
+
+	// Upcoming events (next 7 days)
+	var upcomingEvents int64
+	now := time.Now()
+	nextWeek := now.AddDate(0, 0, 7)
+	store.db.Model(&dbmodels.CalendarEvent{}).
+		Where("start_time >= ? AND start_time <= ? AND status = ?", now, nextWeek, dbmodels.EventStatus_SCHEDULED).
+		Count(&upcomingEvents)
+	stats["upcoming_events"] = upcomingEvents
+
+	return stats, nil
+}

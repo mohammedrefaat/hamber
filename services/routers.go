@@ -35,6 +35,16 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 			packages.GET("/:id", controllers.GetPackage)
 		}
 
+		// Add-on routes (public - viewing only)
+		addons := api.Group("/addons")
+		{
+			addons.GET("/", controllers.GetAddons)
+			addons.GET("/:id", controllers.GetAddon)
+		}
+
+		// Public calendar events
+		api.GET("/calendar/public", controllers.GetPublicEvents)
+
 		// Authentication routes
 		auth := api.Group("/auth")
 		{
@@ -84,6 +94,13 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 
 		// Contact form route (public)
 		api.POST("/contact", controllers.SubmitContactForm)
+
+		// Payment callback routes (public - called by payment gateways)
+		paymentCallbacks := api.Group("/payment")
+		{
+			paymentCallbacks.POST("/fawry/callback", controllers.FawryCallback)
+			paymentCallbacks.POST("/paymob/callback", controllers.PaymobCallback)
+		}
 	}
 
 	// Protected routes (authentication required)
@@ -97,10 +114,7 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 		// Photo routes
 		photos := protected.Group("/photos")
 		{
-			// Avatar upload
 			photos.POST("/avatar", controllers.UploadAvatarPhoto)
-
-			// Get presigned URL for private photos
 			photos.GET("/presigned-url", controllers.GetPhotoPresignedURL)
 		}
 
@@ -110,14 +124,96 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 			protectedBlogs.POST("/", controllers.CreateBlogWithPhotos)
 			protectedBlogs.PUT("/:id", controllers.UpdateBlog)
 			protectedBlogs.DELETE("/:id", controllers.DeleteBlog)
-
-			// Photo management for blogs
 			protectedBlogs.POST("/:id/photos", controllers.UploadBlogPhotoV2)
 			protectedBlogs.DELETE("/:id/photos", controllers.DeleteBlogPhoto)
 		}
 
 		// User permissions
 		protected.GET("/permissions", controllers.GetUserPermissions)
+
+		// Product routes (protected)
+		products := protected.Group("/products")
+		{
+			products.POST("/", controllers.CreateProduct)
+			products.GET("/", controllers.GetProducts)
+			products.GET("/:id", controllers.GetProduct)
+			products.PUT("/:id", controllers.UpdateProduct)
+			products.DELETE("/:id", controllers.DeleteProduct)
+			products.PATCH("/:id/quantity", controllers.UpdateProductQuantity)
+			products.GET("/categories", controllers.GetProductCategories)
+		}
+
+		// Order routes (protected)
+		orders := protected.Group("/orders")
+		{
+			orders.POST("/", controllers.CreateOrder)
+			orders.GET("/", controllers.GetOrders)
+			orders.GET("/:id", controllers.GetOrder)
+			orders.PATCH("/:id/status", controllers.UpdateOrderStatus)
+			orders.PATCH("/:id/cancel", controllers.CancelOrder)
+		}
+
+		// Receipt routes (protected)
+		receipts := protected.Group("/receipts")
+		{
+			receipts.POST("/order/:order_id", controllers.GenerateOrderReceipt)
+			receipts.GET("/order/:order_id", controllers.GetOrderReceipt)
+			receipts.GET("/order/:order_id/download", controllers.DownloadReceipt)
+			receipts.GET("/order/:order_id/html", controllers.GetReceiptHTML)
+		}
+
+		// To do routes (protected)
+		todos := protected.Group("/todos")
+		{
+			todos.POST("/", controllers.CreateTodo)
+			todos.GET("/", controllers.GetTodos)
+			todos.GET("/:id", controllers.GetTodo)
+			todos.PUT("/:id", controllers.UpdateTodo)
+			todos.DELETE("/:id", controllers.DeleteTodo)
+			todos.PATCH("/:id/toggle", controllers.ToggleTodoComplete)
+		}
+
+		// Calendar routes (protected)
+		calendar := protected.Group("/calendar")
+		{
+			calendar.POST("/events", controllers.CreateCalendarEvent)
+			calendar.GET("/events", controllers.GetUserEvents)
+			calendar.GET("/events/:id", controllers.GetCalendarEvent)
+			calendar.PUT("/events/:id", controllers.UpdateCalendarEvent)
+			calendar.DELETE("/events/:id", controllers.DeleteCalendarEvent)
+			calendar.PATCH("/events/:id/status", controllers.UpdateEventStatus)
+			calendar.PATCH("/attendees/:attendee_id/respond", controllers.RespondToInvitation)
+		}
+
+		// Add-on subscription routes (protected)
+		addonSubscriptions := protected.Group("/subscriptions")
+		{
+			addonSubscriptions.POST("/", controllers.SubscribeToAddon)
+			addonSubscriptions.GET("/", controllers.GetUserSubscriptions)
+			addonSubscriptions.GET("/:id", controllers.GetSubscription)
+			addonSubscriptions.DELETE("/:id/cancel", controllers.CancelSubscription)
+			addonSubscriptions.POST("/:id/usage", controllers.LogUsage)
+			addonSubscriptions.GET("/:id/usage", controllers.GetUsageLogs)
+		}
+
+		// Notification routes (protected)
+		notifications := protected.Group("/notifications")
+		{
+			notifications.GET("/", controllers.GetUserNotifications)
+			notifications.GET("/unread-count", controllers.GetUnreadCount)
+			notifications.PATCH("/:id/read", controllers.MarkNotificationAsRead)
+			notifications.PATCH("/read-all", controllers.MarkAllNotificationsAsRead)
+			notifications.DELETE("/:id", controllers.DeleteNotification)
+		}
+
+		// Payment routes (protected)
+		payment := protected.Group("/payment")
+		{
+			payment.POST("/change-package", controllers.RequestPackageChange)
+			payment.GET("/status/:id", controllers.GetPaymentStatus)
+			payment.GET("/history", controllers.GetUserPayments)
+			payment.GET("/package-changes", controllers.GetPackageChangeHistory)
+		}
 
 		// Admin only routes
 		admin := protected.Group("/admin")
@@ -134,7 +230,7 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 			admin.DELETE("/users/:id/roles", controllers.RemoveRole)
 
 			// Blog management
-			admin.GET("/blogs", controllers.GetAllBlogsAdmin) // All blogs including unpublished
+			admin.GET("/blogs", controllers.GetAllBlogsAdmin)
 			admin.GET("/blogs/analytics", controllers.GetBlogAnalytics)
 
 			// Newsletter management
@@ -143,11 +239,14 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 				adminNewsletter.GET("/subscriptions", controllers.GetAllNewsletterSubscriptions)
 				adminNewsletter.GET("/stats", controllers.GetNewsletterStats)
 			}
+
+			// Payment management
 			adminPayment := admin.Group("/payments")
 			{
 				adminPayment.GET("/", controllers.GetAllPayments)
 				adminPayment.GET("/:id", controllers.GetPaymentStatus)
 			}
+
 			// Contact management
 			adminContact := admin.Group("/contacts")
 			{
@@ -158,113 +257,25 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 				adminContact.GET("/stats", controllers.GetContactStats)
 			}
 
+			// Add-on management (admin)
+			adminAddons := admin.Group("/addons")
+			{
+				adminAddons.POST("/", controllers.CreateAddon)
+				adminAddons.PUT("/:id", controllers.UpdateAddon)
+				adminAddons.DELETE("/:id", controllers.DeleteAddon)
+				adminAddons.POST("/pricing-tiers", controllers.CreatePricingTier)
+			}
+
+			// Calendar management (admin)
+			adminCalendar := admin.Group("/calendar")
+			{
+				adminCalendar.GET("/all-events", controllers.GetAllEvents)
+				adminCalendar.GET("/stats", controllers.GetCalendarStats)
+			}
+
 			// Photo statistics
 			admin.GET("/photos/stats", controllers.GetPhotoStats)
 		}
-		// Add-on management (admin)
-		adminAddons := admin.Group("/addons")
-		{
-			adminAddons.POST("/", controllers.CreateAddon)
-			//adminAddons.PUT("/:id", controllers.UpdateAddon)
-			//adminAddons.DELETE("/:id", controllers.DeleteAddon)
-			adminAddons.POST("/pricing-tiers", controllers.CreatePricingTier)
-		}
-		addonSubscriptions := protected.Group("/subscriptions")
-		{
-			addonSubscriptions.POST("/", controllers.SubscribeToAddon)
-			addonSubscriptions.GET("/", controllers.GetUserSubscriptions)
-			addonSubscriptions.GET("/:id", controllers.GetSubscription)
-			addonSubscriptions.DELETE("/:id/cancel", controllers.CancelSubscription)
-			addonSubscriptions.POST("/:id/usage", controllers.LogUsage)
-			addonSubscriptions.GET("/:id/usage", controllers.GetUsageLogs)
-		}
-		// Calendar routes (protected)
-		calendar := protected.Group("/calendar")
-		{
-			calendar.POST("/events", controllers.CreateCalendarEvent)
-			calendar.GET("/events", controllers.GetUserEvents)
-			calendar.GET("/events/:id", controllers.GetCalendarEvent)
-			calendar.PUT("/events/:id", controllers.UpdateCalendarEvent)
-			calendar.DELETE("/events/:id", controllers.DeleteCalendarEvent)
-			calendar.PATCH("/events/:id/status", controllers.UpdateEventStatus)
-			calendar.PATCH("/attendees/:attendee_id/respond", controllers.RespondToInvitation)
-		}
-		// Receipt routes (protected)
-		receipts := protected.Group("/receipts")
-		{
-			receipts.POST("/order/:order_id", controllers.GenerateOrderReceipt)
-			receipts.GET("/order/:order_id", controllers.GetOrderReceipt)
-			receipts.GET("/order/:order_id/download", controllers.DownloadReceipt)
-			receipts.GET("/order/:order_id/html", controllers.GetReceiptHTML)
-		}
-	}
-	/*// User routes (protected)
-	user := protected.Group("/user")
-	{
-		user.GET("/me", controllers.GetCurrentUser)
-		user.GET("/profile", controllers.GetUserProfile)
-	}*/
-
-	// Product routes (protected)
-	products := protected.Group("/products")
-	{
-		products.POST("/", controllers.CreateProduct)
-		products.GET("/", controllers.GetProducts)
-		products.GET("/:id", controllers.GetProduct)
-		products.PUT("/:id", controllers.UpdateProduct)
-		products.DELETE("/:id", controllers.DeleteProduct)
-		products.PATCH("/:id/quantity", controllers.UpdateProductQuantity)
-		products.GET("/categories", controllers.GetProductCategories)
-	}
-
-	// Order routes (protected)
-	orders := protected.Group("/orders")
-	{
-		orders.POST("/", controllers.CreateOrder)
-		orders.GET("/", controllers.GetOrders)
-		orders.GET("/:id", controllers.GetOrder)
-		orders.PATCH("/:id/status", controllers.UpdateOrderStatus)
-		orders.PATCH("/:id/cancel", controllers.CancelOrder)
-	}
-
-	// To do routes (protected)
-	todos := protected.Group("/todos")
-	{
-		todos.POST("/", controllers.CreateTodo)
-		todos.GET("/", controllers.GetTodos)
-		todos.GET("/:id", controllers.GetTodo)
-		todos.PUT("/:id", controllers.UpdateTodo)
-		todos.DELETE("/:id", controllers.DeleteTodo)
-		todos.PATCH("/:id/toggle", controllers.ToggleTodoComplete)
-	}
-
-	// Payment routes (protected)
-	payment := protected.Group("/payment")
-	{
-		// Package change request
-		payment.POST("/change-package", controllers.RequestPackageChange)
-
-		// Get payment status
-		payment.GET("/status/:id", controllers.GetPaymentStatus)
-
-		// Get user's payment history
-		payment.GET("/history", controllers.GetUserPayments)
-
-		// Get package change history
-		payment.GET("/package-changes", controllers.GetPackageChangeHistory)
-	}
-
-	// Add public payment callback routes (no authentication required)
-	// Add this in the api group (public routes):
-
-	// Payment callback routes (public - called by payment gateways)
-	paymentCallbacks := api.Group("/payment")
-	{
-		// Fawry callback
-		paymentCallbacks.POST("/fawry/callback", controllers.FawryCallback)
-
-		// Paymob callback
-		paymentCallbacks.POST("/paymob/callback", controllers.PaymobCallback)
 	}
 
 	return router, nil

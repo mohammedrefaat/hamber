@@ -186,3 +186,29 @@ func (store *DbStore) GetAddonUsageLogs(subscriptionID uint, page, limit int) ([
 
 	return logs, total, nil
 }
+
+func (store *DbStore) GetAddonSubscriptionsByAddon(addonID uint, page, limit int) ([]dbmodels.UserAddonSubscription, int64, error) {
+	var subscriptions []dbmodels.UserAddonSubscription
+	var total int64
+
+	query := store.db.Model(&dbmodels.UserAddonSubscription{}).Where("addon_id = ?", addonID)
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to count subscriptions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	offset := (page - 1) * limit
+	if err := query.Preload("User").Preload("PricingTier").
+		Offset(offset).Limit(limit).Order("created_at DESC").
+		Find(&subscriptions).Error; err != nil {
+		return nil, 0, &CustomError{
+			Message: "Failed to fetch subscriptions",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	return subscriptions, total, nil
+}
