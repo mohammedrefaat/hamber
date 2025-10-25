@@ -1,0 +1,16 @@
+basePath: /api
+host: test.hamber-hub.com
+info:
+  contact:
+    email: support@hamber-hub.com
+    name: API Support
+    url: http://www.hamber-hub.com/support
+  description: This is the API documentation for the Hamber platform
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Hamber API Documentation
+  version: "1.0"
+paths: {}
+swagger: "2.0"

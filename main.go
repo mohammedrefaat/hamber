@@ -14,23 +14,19 @@ import (
 
 // @title           Hamber API Documentation
 // @version         1.0
-// @description     This is the API documentation for Hamber platform
+// @description     This is the API documentation for the Hamber platform
 // @termsOfService  http://swagger.io/terms/
 
-// @contact.name   API Support
-// @contact.url    http://www.hamber-hub.com/support
-// @contact.email  support@hamber-hub.com
+// @contact.name    API Support
+// @contact.url     http://www.hamber-hub.com/support
+// @contact.email   support@hamber-hub.com
 
-// @license.name  Apache 2.0
-// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+// @license.name    Apache 2.0
+// @license.url     http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host      test.hamber-hub.com
-// @BasePath  /api
+// @host            test.hamber-hub.com
+// @BasePath        /api
 
-// @securityDefinitions.apikey Bearer
-// @in header
-// @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
 func main() {
 
 	defer func() {

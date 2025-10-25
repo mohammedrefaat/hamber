@@ -7,8 +7,9 @@ import (
 	"github.com/mohammedrefaat/hamber/controllers"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
 	// Import your generated docs
-	//_ "github.com/mohammedrefaat/hamber/docs"
+	_ "github.com/mohammedrefaat/hamber/docs"
 )
 
 func GetRouter(cfg *config.Config) (*gin.Engine, error) {
