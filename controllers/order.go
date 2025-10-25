@@ -39,6 +39,10 @@ func CreateOrder(c *gin.Context) {
 		Status:   dbmodels.OrderStatus_PENDING,
 	}
 
+	//   Send notification
+	if globalStore.NotifService != nil {
+		go globalStore.NotifService.NotifyNewOrder(userID, order.ID, order.Total)
+	}
 	if err := globalStore.StStore.CreateOrder(&order); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create order"})
 		return
@@ -88,7 +92,6 @@ func UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	// Convert string status to enum
 	var status dbmodels.OrderStatus
 	switch req.Status {
 	case "PENDING":
@@ -104,9 +107,21 @@ func UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
+	// Get order to get user ID
+	order, err := globalStore.StStore.GetOrderByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+		return
+	}
+
 	if err := globalStore.StStore.UpdateOrderStatus(uint(id), status); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
 		return
+	}
+
+	// NEW: Send notification
+	if globalStore.NotifService != nil {
+		go globalStore.NotifService.NotifyOrderStatusChange(order.UserID, order.ID, req.Status)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order status updated successfully"})

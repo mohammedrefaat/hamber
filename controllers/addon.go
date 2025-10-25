@@ -318,6 +318,11 @@ func SubscribeToAddon(c *gin.Context) {
 		return
 	}
 
+	// NEW: Send notification
+	if addon != nil && globalStore.NotifService != nil {
+		endDate := time.Now().AddDate(0, 0, addon.BillingCycle*req.Quantity)
+		go globalStore.NotifService.NotifyAddonSubscription(claims.UserID, addon.Title, endDate)
+	}
 	// Create subscription
 	subscription := &dbmodels.UserAddonSubscription{
 		UserID:        claims.UserID,

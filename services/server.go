@@ -1,3 +1,5 @@
+// services/server.go - Updated version
+
 package services
 
 import (
@@ -8,15 +10,17 @@ import (
 	config "github.com/mohammedrefaat/hamber/Config"
 	db "github.com/mohammedrefaat/hamber/Db"
 	"github.com/mohammedrefaat/hamber/controllers"
+	"github.com/mohammedrefaat/hamber/notification"
 	"github.com/mohammedrefaat/hamber/stores"
 	"github.com/mohammedrefaat/hamber/utils"
 )
 
 type Service struct {
-	Router   *gin.Engine
-	StStore  *stores.DbStore
-	config   *config.Config
-	photosrv *db.PhotoSrv
+	Router       *gin.Engine
+	StStore      *stores.DbStore
+	config       *config.Config
+	photosrv     *db.PhotoSrv
+	notifService *notification.NotificationService
 }
 
 func NewServer() (*Service, error) {
@@ -30,10 +34,13 @@ func NewServer() (*Service, error) {
 
 	// Get the DSN from config
 	dsn := config.GetDSN()
+
+	// Initialize photo service
 	err = InitPhotoService(config)
 	if err != nil {
 		return nil, err
 	}
+
 	// Connect to the database
 	database, err := db.OpenDbConn(dsn)
 	if err != nil {
@@ -45,11 +52,27 @@ func NewServer() (*Service, error) {
 		return nil, err
 	}
 
+	// Initialize notification service
+	var notifService *notification.NotificationService
+	if config.IsRabbitMQEnabled() {
+		rabbitMQURL := config.GetRabbitMQURL()
+		notifService, err = notification.NewNotificationService(rabbitMQURL, StStore)
+		if err != nil {
+			log.Printf("⚠️ Warning: Failed to initialize notification service: %v", err)
+			log.Println("⚠️ Continuing without notification service...")
+		} else {
+			log.Println("✓ Notification service initialized successfully")
+		}
+	} else {
+		log.Println("ℹ️ RabbitMQ is disabled in configuration")
+	}
+
 	// Set the global store for controllers
 	controllers.SetStore(&controllers.GlobalService{
-		StStore:  StStore,
-		Config:   config,
-		PhotoSrv: GetPhotoService(),
+		StStore:      StStore,
+		Config:       config,
+		PhotoSrv:     GetPhotoService(),
+		NotifService: notifService,
 	})
 
 	router, err := GetRouter(config)
@@ -58,10 +81,11 @@ func NewServer() (*Service, error) {
 	}
 
 	serv := Service{
-		StStore:  StStore,
-		Router:   router,
-		config:   config,
-		photosrv: GetPhotoService(),
+		StStore:      StStore,
+		Router:       router,
+		config:       config,
+		photosrv:     GetPhotoService(),
+		notifService: notifService,
 	}
 
 	return &serv, nil
@@ -77,11 +101,20 @@ func (c *Service) Run() {
 		MaxHeaderBytes: c.config.Server.MaxHeaderBytes,
 	}
 
-	log.Printf("Server starting on port %s", c.config.Server.Port)
+	log.Printf("🚀 Server starting on port %s", c.config.Server.Port)
+	log.Printf("📚 Swagger documentation available at: http://localhost%s/swagger/index.html", c.config.Server.Port)
+
 	// Start the server
 	if err := s.ListenAndServe(); err != nil {
-		log.Fatal("Server failed to start:", err)
+		log.Fatal("❌ Server failed to start:", err)
 	}
+}
+
+func (c *Service) Shutdown() {
+	if c.notifService != nil {
+		c.notifService.Close()
+	}
+	log.Println("🛑 Server shutdown complete")
 }
 
 var GlobalPhotoService *db.PhotoSrv
@@ -108,7 +141,7 @@ func InitPhotoService(cfg *config.Config) error {
 // GetPhotoService returns the global photo service instance
 func GetPhotoService() *db.PhotoSrv {
 	if GlobalPhotoService == nil {
-		log.Fatal("Photo service not initialized. Call InitPhotoService first.")
+		log.Fatal("❌ Photo service not initialized. Call InitPhotoService first.")
 	}
 	return GlobalPhotoService
 }

@@ -206,7 +206,6 @@ func FawryCallback(c *gin.Context) {
 		return
 	}
 
-	// Verify signature
 	fawryService := payment.NewFawryService(globalStore.Config.GetFawryConfig())
 	if !fawryService.VerifyCallback(req.MessageSignature, req.FawryRefNumber, req.PaymentAmount, req.OrderStatus) {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -215,7 +214,6 @@ func FawryCallback(c *gin.Context) {
 		return
 	}
 
-	// Get payment by reference number
 	payment, err := globalStore.StStore.GetPaymentByReference(req.FawryRefNumber)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -224,13 +222,20 @@ func FawryCallback(c *gin.Context) {
 		return
 	}
 
-	// Update payment status based on Fawry response
 	var newStatus dbmodels.PaymentStatus
 	switch req.OrderStatus {
 	case "PAID":
 		newStatus = dbmodels.PaymentStatus_PAID
+		// NEW: Send success notification
+		if globalStore.NotifService != nil {
+			go globalStore.NotifService.NotifyPaymentSuccess(payment.UserID, payment.ID, payment.Amount)
+		}
 	case "FAILED":
 		newStatus = dbmodels.PaymentStatus_FAILED
+		// NEW: Send failure notification
+		if globalStore.NotifService != nil {
+			go globalStore.NotifService.NotifyPaymentFailed(payment.UserID, payment.ID, "Payment processing failed")
+		}
 	case "CANCELED":
 		newStatus = dbmodels.PaymentStatus_CANCELLED
 	case "EXPIRED":
@@ -239,7 +244,6 @@ func FawryCallback(c *gin.Context) {
 		newStatus = dbmodels.PaymentStatus_PENDING
 	}
 
-	// Update payment
 	if err := globalStore.StStore.UpdatePaymentStatus(payment.ID, newStatus, req.FawryRefNumber); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to update payment status",
@@ -247,10 +251,7 @@ func FawryCallback(c *gin.Context) {
 		return
 	}
 
-	// If payment is successful, complete package change
 	if newStatus == dbmodels.PaymentStatus_PAID {
-		// Find associated package change
-		//var packageChange dbmodels.PackageChange
 		if err := globalStore.StStore.CompletePackageChange(payment.ID, payment.PackageID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Failed to complete package change",
@@ -258,7 +259,11 @@ func FawryCallback(c *gin.Context) {
 			return
 		}
 
-		// TODO: Send confirmation email to user
+		// Get package info for notification
+		pkg, _ := globalStore.StStore.GetPackage(payment.PackageID)
+		if pkg != nil && globalStore.NotifService != nil {
+			go globalStore.NotifService.NotifyPackageChange(payment.UserID, "old", pkg.Name)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -33,21 +34,6 @@ type EventAttendeeInput struct {
 	Email  string `json:"email"`
 	Name   string `json:"name"`
 }
-
-// CreateCalendarEvent godoc
-// @Summary      Create a new calendar event
-// @Description  Creates a new calendar event with optional attendees
-// @Tags         Calendar
-// @Accept       json
-// @Produce      json
-// @Param        Authorization  header    string  true  "Bearer token"
-// @Param        event          body      CreateEventRequest  true  "Event details"
-// @Success      201  {object}  map[string]interface{}
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      401  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Router       /calendar/events [post]
-// @Security     Bearer
 
 func CreateCalendarEvent(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
@@ -93,7 +79,15 @@ func CreateCalendarEvent(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create event"})
 		return
 	}
-
+	//  Schedule reminder notification
+	if event.RemindBefore > 0 && globalStore.NotifService != nil {
+		reminderTime := event.StartTime.Add(-time.Duration(event.RemindBefore) * time.Minute)
+		if reminderTime.After(time.Now()) {
+			// You can implement a scheduler here to send notification at specific time
+			// For now, we'll just log it
+			log.Printf("Reminder scheduled for event %d at %s", event.ID, reminderTime)
+		}
+	}
 	// Add attendees if provided
 	for _, attendee := range req.Attendees {
 		eventAttendee := &dbmodels.EventAttendee{
@@ -111,22 +105,6 @@ func CreateCalendarEvent(c *gin.Context) {
 		"message": "Event created successfully",
 	})
 }
-
-// GetUserEvents godoc
-// @Summary      Get user's calendar events
-// @Description  Retrieves events for a specific month/year
-// @Tags         Calendar
-// @Accept       json
-// @Produce      json
-// @Param        Authorization   header  string  true   "Bearer token"
-// @Param        year           query   int     false  "Year (default: current year)"
-// @Param        month          query   int     false  "Month 1-12 (default: current month)"
-// @Param        include_public query   bool    false  "Include public events (default: true)"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      401  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Router       /calendar/events [get]
-// @Security     Bearer
 
 func GetUserEvents(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)

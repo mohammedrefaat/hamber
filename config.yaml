@@ -99,3 +99,10 @@ payment:
     api_url: "https://accept.paymob.com/api"
     callback_url: "https://yourdomain.com/api/payment/paymob/callback"
     enabled: true
+rabbitmq:
+  enabled: true
+  host: localhost
+  port: 5672
+  username: guest
+  password: guest
+  vhost: /

@@ -8,6 +8,7 @@ import (
 	config "github.com/mohammedrefaat/hamber/Config"
 	dbmodels "github.com/mohammedrefaat/hamber/DB_models"
 	db "github.com/mohammedrefaat/hamber/Db"
+	"github.com/mohammedrefaat/hamber/notification"
 	"github.com/mohammedrefaat/hamber/stores"
 	"github.com/mohammedrefaat/hamber/utils"
 )
@@ -16,9 +17,10 @@ import (
 var globalStore *GlobalService
 
 type GlobalService struct {
-	StStore  *stores.DbStore
-	Config   *config.Config
-	PhotoSrv *db.PhotoSrv
+	StStore      *stores.DbStore
+	Config       *config.Config
+	PhotoSrv     *db.PhotoSrv
+	NotifService *notification.NotificationService
 }
 
 // SetStore initializes the global store
@@ -138,7 +140,10 @@ func Register(c *gin.Context) {
 		})
 		return
 	}
-
+	//  Send welcome notification
+	if globalStore.NotifService != nil {
+		go globalStore.NotifService.NotifyWelcome(user.ID, user.Name)
+	}
 	accessToken, err := utils.GenerateJWT(userWithRole)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
