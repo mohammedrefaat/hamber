@@ -16,7 +16,18 @@ type CreateOrderRequest struct {
 	Total    float64 `json:"total" binding:"required"`
 }
 
-// CreateOrder creates a new order
+// CreateOrder godoc
+// @Summary      Create a new order
+// @Description  Create a new order for products
+// @Tags         Orders
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        request body CreateOrderRequest true "Order details"
+// @Success      201 {object} map[string]interface{} "Order created"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /orders [post]
 func CreateOrder(c *gin.Context) {
 
 	//todo check if client exists
@@ -54,7 +65,18 @@ func CreateOrder(c *gin.Context) {
 	})
 }
 
-// GetOrders retrieves orders with pagination
+// GetOrders godoc
+// @Summary      Get orders list
+// @Description  Get paginated list of user orders
+// @Tags         Orders
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        page query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(10)
+// @Success      200 {object} map[string]interface{} "Orders list"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /orders [get]
 func GetOrders(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -76,7 +98,18 @@ func GetOrders(c *gin.Context) {
 	})
 }
 
-// UpdateOrderStatus updates order status
+// UpdateOrderStatus godoc
+// @Summary      Update order status
+// @Description  Update the status of an order
+// @Tags         Orders
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Order ID"
+// @Param        request body map[string]string true "Status update"
+// @Success      200 {object} map[string]interface{} "Status updated"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Router       /orders/{id}/status [patch]
 func UpdateOrderStatus(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -143,7 +176,18 @@ func CancelOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
 }
 
-// GetOrder retrieves a single order by ID
+// GetOrder godoc
+// @Summary      Get order by ID
+// @Description  Get details of a specific order
+// @Tags         Orders
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Order ID"
+// @Success      200 {object} map[string]interface{} "Order details"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      404 {object} map[string]interface{} "Order not found"
+// @Router       /orders/{id} [get]
 func GetOrder(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

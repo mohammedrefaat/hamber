@@ -139,7 +139,19 @@ func CreateProduct(c *gin.Context) {
 	})
 }
 
-// GetProducts retrieves products with pagination and returns base64 photos
+// GetProducts godoc
+// @Summary      Get products list
+// @Description  Get paginated list of products
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        page query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(10)
+// @Param        category query string false "Filter by category"
+// @Success      200 {object} map[string]interface{} "Products list"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /products [get]
 func GetProducts(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -177,7 +189,18 @@ func GetProducts(c *gin.Context) {
 	})
 }
 
-// GetProduct retrieves a single product with base64 photos
+// GetProduct godoc
+// @Summary      Get product by ID
+// @Description  Get details of a specific product
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Product ID"
+// @Success      200 {object} ProductResponse "Product details"
+// @Failure      404 {object} map[string]interface{} "Product not found"
+// @Router       /products/{id} [get]
+
 func GetProduct(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -203,7 +226,19 @@ func GetProduct(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"product": response})
 }
 
-// UpdateProduct updates an existing product with base64 photos
+// UpdateProduct godoc
+// @Summary      Update product
+// @Description  Update an existing product
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Product ID"
+// @Param        request body UpdateProductRequest true "Updated product details"
+// @Success      200 {object} map[string]interface{} "Product updated"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Router       /products/{id} [put]
 func UpdateProduct(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -324,7 +359,18 @@ func UpdateProduct(c *gin.Context) {
 	})
 }
 
-// DeleteProduct soft deletes a product
+// DeleteProduct godoc
+// @Summary      Delete product
+// @Description  Soft delete a product
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Product ID"
+// @Success      200 {object} map[string]interface{} "Product deleted"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Failure      404 {object} map[string]interface{} "Product not found"
+// @Router       /products/{id} [delete]
 func DeleteProduct(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

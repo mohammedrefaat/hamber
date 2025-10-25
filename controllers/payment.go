@@ -30,7 +30,17 @@ type ChangePackageResponse struct {
 	ExpiresAt       *time.Time `json:"expires_at,omitempty"`
 }
 
-// RequestPackageChange handles package upgrade/downgrade requests
+// RequestPackageChange godoc
+// @Summary      Request package change
+// @Description  Request to upgrade or downgrade package
+// @Tags         Payments
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        request body ChangePackageRequest true "Package change request"
+// @Success      200 {object} ChangePackageResponse "Change request created"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Router       /payment/change-package [post]
 func RequestPackageChange(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 

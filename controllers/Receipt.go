@@ -27,7 +27,18 @@ type CompanyInfo struct {
 	TaxID   string `json:"tax_id"`
 }
 
-// GenerateOrderReceipt generates a PDF receipt for an order
+// GenerateOrderReceipt godoc
+// @Summary      Generate order receipt
+// @Description  Generate PDF receipt for an order
+// @Tags         Receipts
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        order_id path int true "Order ID"
+// @Param        request body map[string]interface{} false "Company info"
+// @Success      201 {object} map[string]interface{} "Receipt generated"
+// @Failure      404 {object} map[string]interface{} "Order not found"
+// @Router       /receipts/order/{order_id} [post]
 func GenerateOrderReceipt(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -143,7 +154,20 @@ func GetOrderReceipt(c *gin.Context) {
 	})
 }
 
-// DownloadReceipt downloads the PDF receipt
+// DownloadReceipt godoc
+// @Summary      Download receipt PDF
+// @Description  Download receipt as PDF file
+// @Tags         Receipts
+// @Accept       json
+// @Produce      application/pdf
+// @Security     Bearer
+// @Param        order_id path int true "Order ID"
+// @Success      200 {file} file "PDF file"
+// @Failure      404 {object} map[string]interface{} "Receipt not found"
+// @Router       /receipts/order/{order_id}/download [get]{object} AuthResponse "Login successful"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      401 {object} map[string]interface{} "Invalid credentials"
+// @Router       /auth/login [post]
 func DownloadReceipt(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {

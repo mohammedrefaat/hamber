@@ -32,7 +32,18 @@ type UpdateBlogRequest struct {
 	IsPublished bool   `json:"is_published"`
 }
 
-// CreateBlog creates a new blog post
+// CreateBlog godoc
+// @Summary      Create a new blog post
+// @Description  Create a new blog post with photos
+// @Tags         Blogs
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        request body CreateBlogRequest true "Blog details"
+// @Success      201 {object} map[string]interface{} "Blog created"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      409 {object} map[string]interface{} "Slug already exists"
+// @Router       /blogs [post]
 func CreateBlog(c *gin.Context) {
 	var req CreateBlogRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -77,7 +88,16 @@ func CreateBlog(c *gin.Context) {
 	})
 }
 
-// GetBlogs returns all blog posts with pagination
+// GetBlogs godoc
+// @Summary      Get blogs list
+// @Description  Get paginated list of published blogs
+// @Tags         Blogs
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(10)
+// @Success      200 {object} map[string]interface{} "Blogs list"
+// @Router       /blogs [get]
 func GetBlogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))

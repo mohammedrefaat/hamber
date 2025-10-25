@@ -17,7 +17,17 @@ type CreateTodoRequest struct {
 	DueDate     *time.Time `json:"due_date"`
 }
 
-// CreateTodo creates a new todo
+// CreateTodo godoc
+// @Summary      Create a new todo
+// @Description  Create a new todo task
+// @Tags         Todos
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        request body CreateTodoRequest true "Todo details"
+// @Success      201 {object} map[string]interface{} "Todo created"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Router       /todos [post]
 func CreateTodo(c *gin.Context) {
 	var req CreateTodoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -56,7 +66,19 @@ func CreateTodo(c *gin.Context) {
 	})
 }
 
-// GetTodos retrieves todos with pagination
+// GetTodos godoc
+// @Summary      Get todos list
+// @Description  Get paginated list of user todos
+// @Tags         Todos
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        page query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(10)
+// @Param        completed query boolean false "Filter by completion status"
+// @Success      200 {object} map[string]interface{} "Todos list"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /todos [get]
 func GetTodos(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))

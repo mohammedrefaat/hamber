@@ -60,6 +60,16 @@ type PermissionResponse struct {
 	Permissions []dbmodels.Permission `json:"permissions"`
 }
 
+// Login godoc
+// @Summary      User login
+// @Description  Authenticate user with email and password
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request body LoginRequest true "Login credentials"
+// @Success      200 {object} map[string]interface{} "List of packages"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /packages [get]
 func Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -100,6 +110,18 @@ func Login(c *gin.Context) {
 	})
 }
 
+// Register godoc
+// @Summary      Register a new user
+// @Description  Register a new user account with email and password
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request body RegisterRequest true "Registration details"
+// @Success      201 {object} AuthResponse "User created successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      409 {object} map[string]interface{} "Email or username already exists"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /auth/register [post]
 func Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -167,6 +189,17 @@ func Register(c *gin.Context) {
 	})
 }
 
+// RefreshToken godoc
+// @Summary      Refresh access token
+// @Description  Get a new access token using refresh token
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request body RefreshTokenRequest true "Refresh token"
+// @Success      200 {object} map[string]interface{} "New tokens generated"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      401 {object} map[string]interface{} "Invalid refresh token"
+// @Router       /auth/refresh [post]
 func RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -214,6 +247,17 @@ func RefreshToken(c *gin.Context) {
 	})
 }
 
+// GetProfile godoc
+// @Summary      Get user profile
+// @Description  Get current user's profile information
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Success      200 {object} dbmodels.User "User profile"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      404 {object} map[string]interface{} "User not found"
+// @Router       /profile [get]
 func GetProfile(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
@@ -228,6 +272,18 @@ func GetProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// UpdateProfile godoc
+// @Summary      Update user profile
+// @Description  Update current user's profile information
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        request body map[string]interface{} true "Profile update data"
+// @Success      200 {object} dbmodels.User "Updated profile"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /profile [put]
 func UpdateProfile(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 

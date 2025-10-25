@@ -35,6 +35,18 @@ type EventAttendeeInput struct {
 	Name   string `json:"name"`
 }
 
+// CreateCalendarEvent godoc
+// @Summary      Create calendar event
+// @Description  Create a new calendar event
+// @Tags         Calendar
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        request body CreateEventRequest true "Event details"
+// @Success      201 {object} map[string]interface{} "Event created"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Router       /calendar/events [post]
+
 func CreateCalendarEvent(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -106,6 +118,18 @@ func CreateCalendarEvent(c *gin.Context) {
 	})
 }
 
+// GetUserEvents godoc
+// @Summary      Get user events
+// @Description  Get calendar events for a specific month
+// @Tags         Calendar
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        year query int false "Year" default(2025)
+// @Param        month query int false "Month (1-12)" default(10)
+// @Param        include_public query boolean false "Include public events" default(true)
+// @Success      200 {object} map[string]interface{} "Events list"
+// @Router       /calendar/events [get]
 func GetUserEvents(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {

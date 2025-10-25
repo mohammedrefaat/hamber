@@ -110,6 +110,18 @@ func CreateAddon(c *gin.Context) {
 	})
 }
 
+// GetAddons godoc
+// @Summary      Get add-ons list
+// @Description  Get paginated list of available add-ons
+// @Tags         Add-ons
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(20)
+// @Param        category query string false "Filter by category"
+// @Param        active query boolean false "Filter by active status"
+// @Success      200 {object} map[string]interface{} "Add-ons list"
+// @Router       /addons [get]
 func GetAddons(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
@@ -246,7 +258,17 @@ type SubscribeAddonRequest struct {
 	PaymentMethod string `json:"payment_method" binding:"required,oneof=fawry paymob"`
 }
 
-// SubscribeToAddon allows users to subscribe to an add-on
+// SubscribeToAddon godoc
+// @Summary      Subscribe to an add-on
+// @Description  Subscribe to an add-on service
+// @Tags         Add-on Subscriptions
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        request body SubscribeAddonRequest true "Subscription details"
+// @Success      201 {object} map[string]interface{} "Subscription created"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Router       /subscriptions [post]
 func SubscribeToAddon(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -356,7 +378,17 @@ func SubscribeToAddon(c *gin.Context) {
 	})
 }
 
-// GetUserSubscriptions returns all subscriptions for the current user
+// GetUserSubscriptions godoc
+// @Summary      Get user subscriptions
+// @Description  Get all add-on subscriptions for current user
+// @Tags         Add-on Subscriptions
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        status query string false "Filter by status"
+// @Success      200 {object} map[string]interface{} "Subscriptions list"
+// @Router       /subscriptions [get]
+
 func GetUserSubscriptions(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {

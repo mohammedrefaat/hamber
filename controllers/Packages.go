@@ -7,7 +7,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetAllPackages returns all active packages
+// GetAllPackages godoc
+// @Summary      Get all packages
+// @Description  Get list of all available packages
+// @Tags         Packages
+// @Accept       json
+// @Produce      json
+// @Success      200
+// @Failure      500 {object} map[string]interface{}
+
 func GetAllPackages(c *gin.Context) {
 	packages, err := globalStore.StStore.GetAllPackages()
 	if err != nil {
@@ -22,7 +30,16 @@ func GetAllPackages(c *gin.Context) {
 	})
 }
 
-// GetPackage returns a specific package by ID
+// GetPackage godoc
+// @Summary      Get package by ID
+// @Description  Get details of a specific package
+// @Tags         Packages
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Package ID"
+// @Success      200 {object} dbmodels.Package "Package details"
+// @Failure      404 {object} map[string]interface{} "Package not found"
+// @Router       /packages/{id} [get]
 func GetPackage(c *gin.Context) {
 	packageID := c.Param("id")
 	id, err := strconv.ParseUint(packageID, 10, 32)

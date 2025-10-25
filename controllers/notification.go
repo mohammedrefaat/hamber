@@ -58,7 +58,19 @@ func CreateNotification(c *gin.Context) {
 	})
 }
 
-// GetUserNotifications returns all notifications for the current user
+// GetUserNotifications godoc
+// @Summary      Get user notifications
+// @Description  Get paginated list of user notifications
+// @Tags         Notifications
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        page query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(20)
+// @Param        unread_only query boolean false "Show only unread" default(false)
+// @Success      200 {object} map[string]interface{} "Notifications list"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /notifications [get]
 func GetUserNotifications(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -85,7 +97,17 @@ func GetUserNotifications(c *gin.Context) {
 	})
 }
 
-// MarkNotificationAsRead marks a notification as read
+// MarkNotificationAsRead godoc
+// @Summary      Mark notification as read
+// @Description  Mark a specific notification as read
+// @Tags         Notifications
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Notification ID"
+// @Success      200 {object} map[string]interface{} "Notification marked as read"
+// @Failure      404 {object} map[string]interface{} "Notification not found"
+// @Router       /notifications/{id}/read [patch]
 func MarkNotificationAsRead(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -175,7 +197,16 @@ func DeleteNotification(c *gin.Context) {
 	})
 }
 
-// GetUnreadCount returns the count of unread notifications
+// GetUnreadCount godoc
+// @Summary      Get unread notifications count
+// @Description  Get count of unread notifications for current user
+// @Tags         Notifications
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Success      200 {object} map[string]interface{} "Unread count"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /notifications/unread-count [get]
 func GetUnreadCount(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
