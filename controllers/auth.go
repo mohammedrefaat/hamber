@@ -333,7 +333,16 @@ func UpdateProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-// NEW: Permission endpoint - Gets user permissions from JWT token context
+// GetUserPermissions godoc
+// @Summary      Get user permissions
+// @Description  Get current user's permissions from JWT context
+// @Tags         User
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Success      200 {object} map[string]interface{} "User permissions"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /permissions [get]
 func GetUserPermissions(c *gin.Context) {
 	// Get user information from JWT context
 	userID, exists := c.Get("user_id")
@@ -377,7 +386,19 @@ func GetUserPermissions(c *gin.Context) {
 	})
 }
 
-// FIXED: GetAllUsers - Now properly implemented
+// GetAllUsers godoc
+// @Summary      Get all users (Admin)
+// @Description  Get paginated list of all users - Admin only
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        page query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(20)
+// @Success      200 {object} map[string]interface{} "Users list"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden - Admin only"
+// @Router       /admin/users [get]
 func GetAllUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
@@ -405,6 +426,19 @@ func GetAllUsers(c *gin.Context) {
 	})
 }
 
+// DeleteUser godoc
+// @Summary      Delete user (Admin)
+// @Description  Delete a user account - Admin only
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "User ID"
+// @Success      200 {object} map[string]interface{} "User deleted"
+// @Failure      400 {object} map[string]interface{} "Invalid user ID"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Failure      403 {object} map[string]interface{} "Forbidden"
+// @Router       /admin/users/{id} [delete]
 func DeleteUser(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.ParseUint(userID, 10, 32)
@@ -427,9 +461,19 @@ func DeleteUser(c *gin.Context) {
 	})
 }
 
-// NEW: Role management endpoints
-
-// AssignRole assigns a role to a user (Admin only)
+// AssignRole godoc
+// @Summary      Assign role to user (Admin)
+// @Description  Assign a role to a user - Admin only
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "User ID"
+// @Param        request body map[string]interface{} true "Role assignment (role_id)"
+// @Success      200 {object} map[string]interface{} "Role assigned"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /admin/users/{id}/roles [post]
 func AssignRole(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.ParseUint(userID, 10, 32)
@@ -463,7 +507,18 @@ func AssignRole(c *gin.Context) {
 	})
 }
 
-// RemoveRole removes a role from a user (Admin only)
+// RemoveRole godoc
+// @Summary      Remove role from user (Admin)
+// @Description  Remove a role from a user - Admin only
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "User ID"
+// @Param        request body map[string]interface{} true "Role removal (role_id)"
+// @Success      200 {object} map[string]interface{} "Role removed"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Router       /admin/users/{id}/roles [delete]
 func RemoveRole(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.ParseUint(userID, 10, 32)
@@ -497,7 +552,16 @@ func RemoveRole(c *gin.Context) {
 	})
 }
 
-// GetAllRoles returns all available roles (Admin only)
+// GetAllRoles godoc
+// @Summary      Get all roles (Admin)
+// @Description  Get list of all available roles - Admin only
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Success      200 {object} map[string]interface{} "Roles list"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /admin/roles [get]
 func GetAllRoles(c *gin.Context) {
 	roles, err := globalStore.StStore.GetAllRoles()
 	if err != nil {
@@ -512,7 +576,16 @@ func GetAllRoles(c *gin.Context) {
 	})
 }
 
-// GetAllPermissions returns all available permissions (Admin only)
+// GetAllPermissions godoc
+// @Summary      Get all permissions (Admin)
+// @Description  Get list of all available permissions - Admin only
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Success      200 {object} map[string]interface{} "Permissions list"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /admin/permissions [get]
 func GetAllPermissions(c *gin.Context) {
 	permissions, err := globalStore.StStore.GetAllPermissions()
 	if err != nil {

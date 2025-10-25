@@ -417,7 +417,19 @@ func DeleteProduct(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
 }
 
-// UpdateProductQuantity updates product quantity
+// UpdateProductQuantity godoc
+// @Summary      Update product quantity
+// @Description  Update the quantity/stock of a product
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Product ID"
+// @Param        request body map[string]interface{} true "Quantity update (quantity: int)"
+// @Success      200 {object} map[string]interface{} "Quantity updated"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      403 {object} map[string]interface{} "Not authorized"
+// @Router       /products/{id}/quantity [patch]
 func UpdateProductQuantity(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -581,6 +593,16 @@ func convertProductToResponse(ctx context.Context, photoService *db.PhotoSrv, pr
 	}, nil
 }
 
+// GetProductCategories godoc
+// @Summary      Get product categories
+// @Description  Get list of product categories for the current user
+// @Tags         Products
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Success      200 {object} map[string]interface{} "Categories list"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /products/categories [get]
 func GetProductCategories(c *gin.Context) {
 	userID, err := utils.GetUserIDFromContext(c)
 	if err != nil {

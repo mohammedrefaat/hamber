@@ -7,7 +7,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetAllBlogsAdmin returns all blogs (including unpublished) for admin users
+// GetAllBlogsAdmin godoc
+// @Summary      Get all blogs (Admin)
+// @Description  Get all blogs including unpublished - Admin only
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        page query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(10)
+// @Param        author_id query int false "Filter by author ID"
+// @Success      200 {object} map[string]interface{} "Blogs list"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /admin/blogs [get]
 func GetAllBlogsAdmin(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -54,7 +66,16 @@ func GetAllBlogsAdmin(c *gin.Context) {
 	})
 }
 
-// GetBlogAnalytics returns blog statistics for admin dashboard
+// GetBlogAnalytics godoc
+// @Summary      Get blog analytics (Admin)
+// @Description  Get blog statistics for admin dashboard
+// @Tags         Admin
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Success      200 {object} map[string]interface{} "Blog analytics"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /admin/blogs/analytics [get]
 func GetBlogAnalytics(c *gin.Context) {
 	analytics, err := globalStore.StStore.GetBlogAnalytics()
 	if err != nil {

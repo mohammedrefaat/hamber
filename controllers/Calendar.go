@@ -46,7 +46,6 @@ type EventAttendeeInput struct {
 // @Success      201 {object} map[string]interface{} "Event created"
 // @Failure      400 {object} map[string]interface{} "Invalid request"
 // @Router       /calendar/events [post]
-
 func CreateCalendarEvent(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -178,8 +177,6 @@ func GetUserEvents(c *gin.Context) {
 // @Failure      500  {object}  map[string]interface{}
 // @Router       /calendar/public-events [get]
 // @Security     Bearer
-
-// GetPublicEvents returns all public events for a given month
 func GetPublicEvents(c *gin.Context) {
 	yearStr := c.DefaultQuery("year", strconv.Itoa(time.Now().Year()))
 	monthStr := c.DefaultQuery("month", strconv.Itoa(int(time.Now().Month())))
@@ -220,8 +217,6 @@ func GetPublicEvents(c *gin.Context) {
 // @Failure      500  {object}  map[string]interface{}
 // @Router       /calendar/events/{id} [get]
 // @Security     Bearer
-
-// GetCalendarEvent returns a specific event
 func GetCalendarEvent(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -267,8 +262,6 @@ func GetCalendarEvent(c *gin.Context) {
 // @Failure      500  {object}  map[string]interface{}
 // @Router       /calendar/events/{id} [put]
 // @Security     Bearer
-
-// UpdateCalendarEvent updates an existing event
 func UpdateCalendarEvent(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -341,8 +334,6 @@ func UpdateCalendarEvent(c *gin.Context) {
 // @Failure      500  {object}  map[string]interface{}
 // @Router       /calendar/events/{id} [delete]
 // @Security     Bearer
-
-// DeleteCalendarEvent deletes an event
 func DeleteCalendarEvent(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -383,8 +374,6 @@ func DeleteCalendarEvent(c *gin.Context) {
 // @Failure      500  {object}  map[string]interface{}
 // @Router       /calendar/events/{id}/status [put]
 // @Security     Bearer
-
-// UpdateEventStatus updates the status of an event
 func UpdateEventStatus(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -455,8 +444,6 @@ func UpdateEventStatus(c *gin.Context) {
 // @Failure      500  {object}  map[string]interface{}
 // @Router       /calendar/attendees/{attendee_id}/response [put]
 // @Security     Bearer
-
-// RespondToInvitation allows attendees to respond to event invitations
 func RespondToInvitation(c *gin.Context) {
 
 	attendeeID, err := strconv.ParseUint(c.Param("attendee_id"), 10, 32)

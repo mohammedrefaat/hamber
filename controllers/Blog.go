@@ -88,6 +88,123 @@ func CreateBlog(c *gin.Context) {
 	})
 }
 
+// CreateBlogWithPhotos godoc
+// @Summary      Create blog with photos
+// @Description  Create a new blog post with photos in one request (multipart/form-data)
+// @Tags         Blogs
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     Bearer
+// @Param        title formData string true "Blog title"
+// @Param        content formData string true "Blog content"
+// @Param        summary formData string false "Blog summary"
+// @Param        slug formData string true "Blog slug (URL-friendly)"
+// @Param        is_published formData boolean false "Publish status" default(false)
+// @Param        photos formData file false "Blog photos (multiple allowed)"
+// @Success      201 {object} map[string]interface{} "Blog created with photos"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      401 {object} map[string]interface{} "Unauthorized"
+// @Router       /blogs [post]
+func CreateBlogWithPhotos(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User not authenticated",
+		})
+		return
+	}
+
+	// Parse multipart form
+	err := c.Request.ParseMultipartForm(10 << 20) // 10 MB max
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to parse form data",
+		})
+		return
+	}
+
+	// Extract blog data from form
+	title := c.PostForm("title")
+	content := c.PostForm("content")
+	summary := c.PostForm("summary")
+	slug := c.PostForm("slug")
+	isPublishedStr := c.PostForm("is_published")
+
+	// Validate required fields
+	if title == "" || content == "" || slug == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Title, content, and slug are required",
+		})
+		return
+	}
+
+	// Parse is_published
+	isPublished := false
+	if isPublishedStr == "true" {
+		isPublished = true
+	}
+
+	// Create blog
+	blog := dbmodels.Blog{
+		Title:       title,
+		Content:     content,
+		Summary:     summary,
+		Slug:        slug,
+		AuthorID:    userID.(uint),
+		IsPublished: isPublished,
+		Photos:      "[]", // Initialize as empty array
+	}
+
+	if isPublished {
+		now := time.Now()
+		blog.PublishedAt = &now
+	}
+
+	// Save blog to get ID
+	if err := globalStore.StStore.CreateBlog(&blog); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to create blog post",
+		})
+		return
+	}
+
+	// Get uploaded photos
+	files := c.Request.MultipartForm.File["photos"]
+
+	// If photos were uploaded, process them
+	if len(files) > 0 {
+		photoService := globalStore.PhotoSrv
+		ctx := context.Background()
+
+		// Upload photos to MinIO
+		uploadResults, err := photoService.UploadMultiplePhotos(ctx, files, db.CategoryBlog)
+		if err != nil {
+			// Log error but don't fail the blog creation
+			fmt.Printf("Warning: Failed to upload photos: %v\n", err)
+		} else {
+			// Extract URLs from upload results
+			var photoURLs []string
+			for _, result := range uploadResults {
+				photoURLs = append(photoURLs, result.URL)
+			}
+
+			// Update blog with photo URLs
+			photosJSON, _ := json.Marshal(photoURLs)
+			blog.Photos = string(photosJSON)
+
+			// Update blog with photos
+			if err := globalStore.StStore.UpdateBlog(&blog); err != nil {
+				fmt.Printf("Warning: Failed to update blog with photos: %v\n", err)
+			}
+		}
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"blog":    blog,
+		"message": "Blog created successfully",
+	})
+}
+
 // GetBlogs godoc
 // @Summary      Get blogs list
 // @Description  Get paginated list of published blogs
@@ -126,7 +243,17 @@ func GetBlogs(c *gin.Context) {
 	})
 }
 
-// GetBlog returns a specific blog post
+// GetBlog godoc
+// @Summary      Get blog by ID
+// @Description  Get details of a specific blog post
+// @Tags         Blogs
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Blog ID"
+// @Success      200 {object} map[string]interface{} "Blog details"
+// @Failure      400 {object} map[string]interface{} "Invalid blog ID"
+// @Failure      404 {object} map[string]interface{} "Blog not found"
+// @Router       /blogs/{id} [get]
 func GetBlog(c *gin.Context) {
 	blogID := c.Param("id")
 	id, err := strconv.ParseUint(blogID, 10, 32)
@@ -150,7 +277,20 @@ func GetBlog(c *gin.Context) {
 	})
 }
 
-// UpdateBlog updates an existing blog post
+// UpdateBlog godoc
+// @Summary      Update blog post
+// @Description  Update an existing blog post
+// @Tags         Blogs
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Blog ID"
+// @Param        request body UpdateBlogRequest true "Updated blog details"
+// @Success      200 {object} map[string]interface{} "Blog updated"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      403 {object} map[string]interface{} "Not authorized"
+// @Failure      404 {object} map[string]interface{} "Blog not found"
+// @Router       /blogs/{id} [put]
 func UpdateBlog(c *gin.Context) {
 	blogID := c.Param("id")
 	id, err := strconv.ParseUint(blogID, 10, 32)
@@ -233,7 +373,19 @@ func UpdateBlog(c *gin.Context) {
 	})
 }
 
-// DeleteBlog deletes a blog post
+// DeleteBlog godoc
+// @Summary      Delete blog post
+// @Description  Delete a blog post
+// @Tags         Blogs
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Blog ID"
+// @Success      200 {object} map[string]interface{} "Blog deleted"
+// @Failure      400 {object} map[string]interface{} "Invalid blog ID"
+// @Failure      403 {object} map[string]interface{} "Not authorized"
+// @Failure      404 {object} map[string]interface{} "Blog not found"
+// @Router       /blogs/{id} [delete]
 func DeleteBlog(c *gin.Context) {
 	blogID := c.Param("id")
 	id, err := strconv.ParseUint(blogID, 10, 32)
@@ -284,7 +436,20 @@ func DeleteBlog(c *gin.Context) {
 	})
 }
 
-// UploadBlogPhoto uploads and converts photos to WebP format
+// UploadBlogPhotoV2 godoc
+// @Summary      Upload blog photos
+// @Description  Upload photos to an existing blog post
+// @Tags         Blogs
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Blog ID"
+// @Param        photos formData file true "Blog photos (multiple allowed)"
+// @Success      200 {object} map[string]interface{} "Photos uploaded"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      403 {object} map[string]interface{} "Not authorized"
+// @Failure      404 {object} map[string]interface{} "Blog not found"
+// @Router       /blogs/{id}/photos [post]
 func UploadBlogPhoto(c *gin.Context) {
 	blogID := c.Param("id")
 	id, err := strconv.ParseUint(blogID, 10, 32)
@@ -596,7 +761,20 @@ func UploadAvatarPhoto(c *gin.Context) {
 	})
 }
 
-// DeleteBlogPhoto deletes a specific photo from a blog
+// DeleteBlogPhoto godoc
+// @Summary      Delete blog photo
+// @Description  Delete a specific photo from a blog post
+// @Tags         Blogs
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Blog ID"
+// @Param        request body map[string]interface{} true "Photo URL (photo_url: string)"
+// @Success      200 {object} map[string]interface{} "Photo deleted"
+// @Failure      400 {object} map[string]interface{} "Invalid request"
+// @Failure      403 {object} map[string]interface{} "Not authorized"
+// @Failure      404 {object} map[string]interface{} "Blog or photo not found"
+// @Router       /blogs/{id}/photos [delete]
 func DeleteBlogPhoto(c *gin.Context) {
 	blogID := c.Param("id")
 	id, err := strconv.ParseUint(blogID, 10, 32)
@@ -799,105 +977,4 @@ func splitString(s string, sep rune) []string {
 	}
 	parts = append(parts, current)
 	return parts
-}
-
-// CreateBlogWithPhotos creates a blog post with photos in one request
-func CreateBlogWithPhotos(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "User not authenticated",
-		})
-		return
-	}
-
-	// Parse multipart form
-	err := c.Request.ParseMultipartForm(10 << 20) // 10 MB max
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to parse form data",
-		})
-		return
-	}
-
-	// Extract blog data from form
-	title := c.PostForm("title")
-	content := c.PostForm("content")
-	summary := c.PostForm("summary")
-	slug := c.PostForm("slug")
-	isPublishedStr := c.PostForm("is_published")
-
-	// Validate required fields
-	if title == "" || content == "" || slug == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Title, content, and slug are required",
-		})
-		return
-	}
-
-	// Parse is_published
-	isPublished := false
-	if isPublishedStr == "true" {
-		isPublished = true
-	}
-
-	// Create blog
-	blog := dbmodels.Blog{
-		Title:       title,
-		Content:     content,
-		Summary:     summary,
-		Slug:        slug,
-		AuthorID:    userID.(uint),
-		IsPublished: isPublished,
-		Photos:      "[]", // Initialize as empty array
-	}
-
-	if isPublished {
-		now := time.Now()
-		blog.PublishedAt = &now
-	}
-
-	// Save blog to get ID
-	if err := globalStore.StStore.CreateBlog(&blog); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to create blog post",
-		})
-		return
-	}
-
-	// Get uploaded photos
-	files := c.Request.MultipartForm.File["photos"]
-
-	// If photos were uploaded, process them
-	if len(files) > 0 {
-		photoService := globalStore.PhotoSrv
-		ctx := context.Background()
-
-		// Upload photos to MinIO
-		uploadResults, err := photoService.UploadMultiplePhotos(ctx, files, db.CategoryBlog)
-		if err != nil {
-			// Log error but don't fail the blog creation
-			fmt.Printf("Warning: Failed to upload photos: %v\n", err)
-		} else {
-			// Extract URLs from upload results
-			var photoURLs []string
-			for _, result := range uploadResults {
-				photoURLs = append(photoURLs, result.URL)
-			}
-
-			// Update blog with photo URLs
-			photosJSON, _ := json.Marshal(photoURLs)
-			blog.Photos = string(photosJSON)
-
-			// Update blog with photos
-			if err := globalStore.StStore.UpdateBlog(&blog); err != nil {
-				fmt.Printf("Warning: Failed to update blog with photos: %v\n", err)
-			}
-		}
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"blog":    blog,
-		"message": "Blog created successfully",
-	})
 }

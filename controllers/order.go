@@ -160,7 +160,17 @@ func UpdateOrderStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Order status updated successfully"})
 }
 
-// CancelOrder cancels an order
+// CancelOrder godoc
+// @Summary      Cancel order
+// @Description  Cancel an order
+// @Tags         Orders
+// @Accept       json
+// @Produce      json
+// @Security     Bearer
+// @Param        id path int true "Order ID"
+// @Success      200 {object} map[string]interface{} "Order cancelled"
+// @Failure      400 {object} map[string]interface{} "Invalid order ID"
+// @Router       /orders/{id}/cancel [patch]
 func CancelOrder(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -220,6 +230,20 @@ func GetOrder(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"order": order})
 }
+
+// UpdateOrderPayment godoc
+// @Summary      Update order payment details
+// @Description  Updates the payment status, amount, reference, date, method, and description for a specific order.
+// @Tags         Orders
+// @Accept       json
+// @Produce      json
+// @Param        id              path      int     true   "Order ID"
+// @Param        request         body      UpdateOrderPaymentRequest  true  "Payment update payload"
+// @Success      200  {object}   map[string]string  "Order payment updated successfully"
+// @Failure      400  {object}   map[string]string  "Invalid order ID or bad request"
+// @Failure      500  {object}   map[string]string  "Failed to update order payment"
+// @Security     Bearer
+// @Router       /orders/{id}/payment [put]
 func UpdateOrderPayment(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
