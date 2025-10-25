@@ -1,4 +1,299 @@
 basePath: /api
+definitions:
+  controllers.AuthResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/dbmodels.User'
+    type: object
+  controllers.ChangePackageRequest:
+    properties:
+      new_package_id:
+        type: integer
+      payment_method:
+        enum:
+        - fawry
+        - paymob
+        type: string
+      reason:
+        type: string
+    required:
+    - new_package_id
+    - payment_method
+    type: object
+  controllers.ChangePackageResponse:
+    properties:
+      amount:
+        type: number
+      expires_at:
+        type: string
+      message:
+        type: string
+      package_change_id:
+        type: integer
+      payment_id:
+        type: integer
+      payment_url:
+        type: string
+      reference_number:
+        type: string
+    type: object
+  controllers.CreateBlogRequest:
+    properties:
+      content:
+        type: string
+      is_published:
+        type: boolean
+      slug:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+    required:
+    - content
+    - slug
+    - title
+    type: object
+  controllers.CreateOrderRequest:
+    properties:
+      client_id:
+        type: integer
+      total:
+        type: number
+    required:
+    - client_id
+    - total
+    type: object
+  controllers.CreateTodoRequest:
+    properties:
+      description:
+        type: string
+      due_date:
+        type: string
+      priority:
+        type: string
+      title:
+        type: string
+    required:
+    - title
+    type: object
+  controllers.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  controllers.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  controllers.RegisterRequest:
+    properties:
+      email:
+        type: string
+      mobile_no:
+        type: string
+      name:
+        type: string
+      package_id:
+        type: integer
+      password:
+        minLength: 6
+        type: string
+      subdomain:
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - subdomain
+    type: object
+  controllers.SubscribeAddonRequest:
+    properties:
+      addon_id:
+        type: integer
+      payment_method:
+        enum:
+        - fawry
+        - paymob
+        type: string
+      pricing_tier_id:
+        description: Optional, for discounted pricing
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+    required:
+    - addon_id
+    - payment_method
+    - quantity
+    type: object
+  controllers.UpdateProductRequest:
+    properties:
+      brand:
+        type: string
+      category:
+        type: string
+      description:
+        type: string
+      discount_price:
+        type: number
+      favorite:
+        type: boolean
+      name:
+        type: string
+      photos:
+        description: Array of base64 encoded images
+        items:
+          type: string
+        type: array
+      price:
+        type: number
+      quantity:
+        type: integer
+      sku:
+        type: string
+      tags:
+        type: string
+      weight:
+        type: number
+    type: object
+  dbmodels.Package:
+    properties:
+      benefits:
+        description: JSON string for benefits
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      duration:
+        description: In days or months
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      price:
+        type: number
+      price_per_client:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  dbmodels.Permission:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        description: Permission name (e.g., "CREATE_ORDER")
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  dbmodels.Role:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        description: Role name
+        type: string
+      permissions:
+        description: Role-Permissions relationship
+        items:
+          $ref: '#/definitions/dbmodels.Permission'
+        type: array
+      updatedAt:
+        type: string
+    type: object
+  dbmodels.User:
+    properties:
+      ACTIVATION_CODE:
+        type: string
+      Avatar:
+        description: Profile enhancement
+        type: string
+      Bio:
+        type: string
+      COUNT_SEND_ACTIVATION_EMAIL:
+        type: integer
+      CreatedAt:
+        type: string
+      DEVICE_TOKEN:
+        type: string
+      EXPIRESAT:
+        type: string
+      Email:
+        type: string
+      ID:
+        type: integer
+      IS_ACTIVE:
+        type: boolean
+      IS_BLOCKED:
+        type: boolean
+      IS_EMAIL_VERIFIED:
+        type: boolean
+      IS_MOBILE_VERIFIED:
+        type: boolean
+      LAST_LOGIN_IP:
+        type: string
+      Location:
+        type: string
+      NID:
+        type: string
+      Name:
+        type: string
+      PHONE_CODE_EXPIRES_AT:
+        type: string
+      PHONE_VERIFICATION_CODE:
+        description: New fields for future phone verification
+        type: string
+      PHONE_VERIFIED_AT:
+        type: string
+      Package:
+        $ref: '#/definitions/dbmodels.Package'
+      PackageID:
+        type: integer
+      Password:
+        type: string
+      Phone:
+        description: Added phone field
+        type: string
+      RESET_CODE:
+        type: string
+      Role:
+        description: Many-to-many relationship between users and roles
+        items:
+          $ref: '#/definitions/dbmodels.Role'
+        type: array
+      RoleID:
+        description: Foreign key to the Role table
+        type: integer
+      Subdomain:
+        type: string
+      UpdatedAt:
+        type: string
+      Website:
+        type: string
+    type: object
 host: test.hamber-hub.com
 info:
   contact:
@@ -12,5 +307,892 @@ info:
   termsOfService: http://swagger.io/terms/
   title: Hamber API Documentation
   version: "1.0"
-paths: {}
+paths:
+  /addons:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of available add-ons
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      - description: Filter by active status
+        in: query
+        name: active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Add-ons list
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get add-ons list
+      tags:
+      - Add-ons
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Download receipt as PDF file
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: PDF file
+          schema:
+            type: file
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Receipt not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Download receipt PDF
+      tags:
+      - Receipts
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Get a new access token using refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New tokens generated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid refresh token
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refresh access token
+      tags:
+      - Authentication
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user account with email and password
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/controllers.AuthResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Email or username already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - Authentication
+  /blogs:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of published blogs
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Blogs list
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get blogs list
+      tags:
+      - Blogs
+    post:
+      consumes:
+      - application/json
+      description: Create a new blog post with photos
+      parameters:
+      - description: Blog details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateBlogRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Blog created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Slug already exists
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Create a new blog post
+      tags:
+      - Blogs
+  /calendar/events:
+    get:
+      consumes:
+      - application/json
+      description: Get calendar events for a specific month
+      parameters:
+      - default: 2025
+        description: Year
+        in: query
+        name: year
+        type: integer
+      - default: 10
+        description: Month (1-12)
+        in: query
+        name: month
+        type: integer
+      - default: true
+        description: Include public events
+        in: query
+        name: include_public
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Events list
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get user events
+      tags:
+      - Calendar
+  /notifications:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of user notifications
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - default: false
+        description: Show only unread
+        in: query
+        name: unread_only
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notifications list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get user notifications
+      tags:
+      - Notifications
+  /notifications/{id}/read:
+    patch:
+      consumes:
+      - application/json
+      description: Mark a specific notification as read
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notification marked as read
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Notification not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Mark notification as read
+      tags:
+      - Notifications
+  /notifications/unread-count:
+    get:
+      consumes:
+      - application/json
+      description: Get count of unread notifications for current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Unread count
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get unread notifications count
+      tags:
+      - Notifications
+  /orders:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of user orders
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Orders list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get orders list
+      tags:
+      - Orders
+    post:
+      consumes:
+      - application/json
+      description: Create a new order for products
+      parameters:
+      - description: Order details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Order created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Create a new order
+      tags:
+      - Orders
+  /orders/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific order
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order details
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get order by ID
+      tags:
+      - Orders
+  /orders/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Update the status of an order
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Status update
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Status updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update order status
+      tags:
+      - Orders
+  /packages:
+    get:
+      consumes:
+      - application/json
+      description: Authenticate user with email and password
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of packages
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: User login
+      tags:
+      - Authentication
+  /packages/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific package
+      parameters:
+      - description: Package ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Package details
+          schema:
+            $ref: '#/definitions/dbmodels.Package'
+        "404":
+          description: Package not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get package by ID
+      tags:
+      - Packages
+  /payment/change-package:
+    post:
+      consumes:
+      - application/json
+      description: Request to upgrade or downgrade package
+      parameters:
+      - description: Package change request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.ChangePackageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Change request created
+          schema:
+            $ref: '#/definitions/controllers.ChangePackageResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Request package change
+      tags:
+      - Payments
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of products
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Products list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get products list
+      tags:
+      - Products
+  /products/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Product deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete product
+      tags:
+      - Products
+    put:
+      consumes:
+      - application/json
+      description: Update an existing product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated product details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Product updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update product
+      tags:
+      - Products
+  /profile:
+    get:
+      consumes:
+      - application/json
+      description: Get current user's profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User profile
+          schema:
+            $ref: '#/definitions/dbmodels.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get user profile
+      tags:
+      - User
+    put:
+      consumes:
+      - application/json
+      description: Update current user's profile information
+      parameters:
+      - description: Profile update data
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated profile
+          schema:
+            $ref: '#/definitions/dbmodels.User'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update user profile
+      tags:
+      - User
+  /receipts/order/{order_id}:
+    post:
+      consumes:
+      - application/json
+      description: Generate PDF receipt for an order
+      parameters:
+      - description: Order ID
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      - description: Company info
+        in: body
+        name: request
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Receipt generated
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Generate order receipt
+      tags:
+      - Receipts
+  /receipts/order/{order_id}/download:
+    get:
+      consumes:
+      - application/json
+      description: Download receipt as PDF file
+      parameters:
+      - description: Order ID
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: PDF file
+          schema:
+            type: file
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Receipt not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Download receipt PDF
+      tags:
+      - Receipts
+  /subscriptions:
+    post:
+      consumes:
+      - application/json
+      description: Subscribe to an add-on service
+      parameters:
+      - description: Subscription details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SubscribeAddonRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Subscription created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Subscribe to an add-on
+      tags:
+      - Add-on Subscriptions
+  /todos:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of user todos
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by completion status
+        in: query
+        name: completed
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Todos list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get todos list
+      tags:
+      - Todos
+    post:
+      consumes:
+      - application/json
+      description: Create a new todo task
+      parameters:
+      - description: Todo details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateTodoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Todo created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Create a new todo
+      tags:
+      - Todos
 swagger: "2.0"
