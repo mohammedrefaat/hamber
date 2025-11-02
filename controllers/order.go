@@ -251,7 +251,7 @@ func UpdateOrderPayment(c *gin.Context) {
 		return
 	}
 
-	var req struct {
+	var UpdateOrderPaymentRequest struct {
 		PaymentStatus string     `json:"payment_status" binding:"required"`
 		Amount        float64    `json:"amount" binding:"required"`
 		PaymentRef    string     `json:"payment_ref"`
@@ -259,19 +259,19 @@ func UpdateOrderPayment(c *gin.Context) {
 		PaymentMethod int64      `json:"payment_method"`
 		PaymentDesc   string     `json:"payment_desc"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&UpdateOrderPaymentRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Update order payment details
 	if err := globalStore.StStore.UpdateOrderPayment(uint(id), stores.PaymentUpdate{
-		PaymentStatus: req.PaymentStatus,
-		Amount:        req.Amount,
-		PaymentRef:    req.PaymentRef,
-		PaymentDate:   req.PaymentDate,
-		PaymentMethod: req.PaymentMethod,
-		PaymentDesc:   req.PaymentDesc,
+		PaymentStatus: UpdateOrderPaymentRequest.PaymentStatus,
+		Amount:        UpdateOrderPaymentRequest.Amount,
+		PaymentRef:    UpdateOrderPaymentRequest.PaymentRef,
+		PaymentDate:   UpdateOrderPaymentRequest.PaymentDate,
+		PaymentMethod: UpdateOrderPaymentRequest.PaymentMethod,
+		PaymentDesc:   UpdateOrderPaymentRequest.PaymentDesc,
 	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order payment"})
 		return
