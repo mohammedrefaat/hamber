@@ -46,12 +46,15 @@ func NewServer() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	StStore, err := stores.NewDbStore(database)
 	if err != nil {
 		return nil, err
 	}
 
+	// Seed the database
+	/*if err := dbmodels.SeedDatabase(database); err != nil {
+		log.Fatal("Seeding failed:", err)
+	}*/
 	// Initialize notification service
 	var notifService *notification.NotificationService
 	if config.IsRabbitMQEnabled() {
