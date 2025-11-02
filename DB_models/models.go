@@ -295,5 +295,11 @@ func GetMod() []interface{} {
 		&EventAttendee{},
 		&OrderReceipt{},
 		&Notification{},
+		&Message{},
+		&MessageFolder{},
+		&MessageLabel{},
+		&Banner{},
+		&BannerView{},
+		&BannerClick{},
 	}
 }

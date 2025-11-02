@@ -102,6 +102,9 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 			paymentCallbacks.POST("/fawry/callback", controllers.FawryCallback)
 			paymentCallbacks.POST("/paymob/callback", controllers.PaymobCallback)
 		}
+		// Banner routes (public viewing)
+		api.GET("/banners/active", controllers.GetActiveBanners)
+		api.POST("/banners/:id/click", controllers.TrackBannerClick)
 	}
 
 	// Protected routes (authentication required)
@@ -206,7 +209,31 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 			notifications.PATCH("/read-all", controllers.MarkAllNotificationsAsRead)
 			notifications.DELETE("/:id", controllers.DeleteNotification)
 		}
+		// Internal Messaging System
+		messages := protected.Group("/messages")
+		{
+			messages.POST("/send", controllers.SendMessage)
+			messages.GET("/inbox", controllers.GetInbox)
+			messages.GET("/sent", controllers.GetSentMessages)
+			messages.GET("/stats", controllers.GetMessageStats)
+			messages.GET("/:id", controllers.GetMessage)
+			messages.DELETE("/:id", controllers.DeleteMessage)
+			messages.PATCH("/:id/star", controllers.StarMessage)
+			messages.PATCH("/:id/archive", controllers.ArchiveMessage)
+		}
 
+		// Dashboard Statistics
+		dashboard := protected.Group("/dashboard")
+		{
+			dashboard.GET("/stats", controllers.GetUserDashboard)
+			dashboard.GET("/revenue-chart", controllers.GetRevenueChart)
+			dashboard.GET("/orders-chart", controllers.GetOrdersChart)
+			dashboard.GET("/top-products", controllers.GetTopProducts)
+			dashboard.GET("/recent-orders", controllers.GetRecentOrders)
+			dashboard.GET("/recent-activities", controllers.GetRecentActivities)
+			dashboard.GET("/product-stats", controllers.GetProductStats)
+			dashboard.GET("/client-stats", controllers.GetClientStats)
+		}
 		// Payment routes (protected)
 		payment := protected.Group("/payment")
 		{
@@ -276,6 +303,21 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 
 			// Photo statistics
 			admin.GET("/photos/stats", controllers.GetPhotoStats)
+			// Banner Management (admin)
+			adminBanners := admin.Group("/banners")
+			{
+				adminBanners.POST("/", controllers.CreateBanner)
+				adminBanners.GET("/", controllers.GetAllBanners)
+				//adminBanners.GET("/:id", controllers.GetBanner)
+				adminBanners.PUT("/:id", controllers.UpdateBanner)
+				adminBanners.DELETE("/:id", controllers.DeleteBanner)
+				adminBanners.GET("/:id/analytics", controllers.GetBannerAnalytics)
+			}
+			// Admin Dashboard
+			admin.GET("/dashboard", controllers.GetAdminDashboard)
+			admin.GET("/analytics", controllers.GetPlatformAnalytics)
+			admin.GET("/user-growth-chart", controllers.GetUserGrowthChart)
+			admin.GET("/revenue-breakdown", controllers.GetRevenueBreakdown)
 		}
 	}
 
