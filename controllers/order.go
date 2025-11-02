@@ -16,6 +16,16 @@ type CreateOrderRequest struct {
 	Total    float64 `json:"total" binding:"required"`
 }
 
+// UpdateOrderPaymentRequest represents the payment update payload
+type UpdateOrderPaymentRequest struct {
+	PaymentStatus string     `json:"payment_status" binding:"required" example:"paid"`
+	Amount        float64    `json:"amount" binding:"required" example:"99.99"`
+	PaymentRef    string     `json:"payment_ref" example:"REF123456"`
+	PaymentDate   *time.Time `json:"payment_date" example:"2024-11-03T00:00:00Z"`
+	PaymentMethod int64      `json:"payment_method" example:"1"`
+	PaymentDesc   string     `json:"payment_desc" example:"Credit card payment"`
+}
+
 // CreateOrder godoc
 // @Summary      Create a new order
 // @Description  Create a new order for products
@@ -251,27 +261,21 @@ func UpdateOrderPayment(c *gin.Context) {
 		return
 	}
 
-	var UpdateOrderPaymentRequest struct {
-		PaymentStatus string     `json:"payment_status" binding:"required"`
-		Amount        float64    `json:"amount" binding:"required"`
-		PaymentRef    string     `json:"payment_ref"`
-		PaymentDate   *time.Time `json:"payment_date"`
-		PaymentMethod int64      `json:"payment_method"`
-		PaymentDesc   string     `json:"payment_desc"`
-	}
-	if err := c.ShouldBindJSON(&UpdateOrderPaymentRequest); err != nil {
+	var req UpdateOrderPaymentRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Update order payment details
 	if err := globalStore.StStore.UpdateOrderPayment(uint(id), stores.PaymentUpdate{
-		PaymentStatus: UpdateOrderPaymentRequest.PaymentStatus,
-		Amount:        UpdateOrderPaymentRequest.Amount,
-		PaymentRef:    UpdateOrderPaymentRequest.PaymentRef,
-		PaymentDate:   UpdateOrderPaymentRequest.PaymentDate,
-		PaymentMethod: UpdateOrderPaymentRequest.PaymentMethod,
-		PaymentDesc:   UpdateOrderPaymentRequest.PaymentDesc,
+		PaymentStatus: req.PaymentStatus,
+		Amount:        req.Amount,
+		PaymentRef:    req.PaymentRef,
+		PaymentDate:   req.PaymentDate,
+		PaymentMethod: req.PaymentMethod,
+		PaymentDesc:   req.PaymentDesc,
 	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order payment"})
 		return

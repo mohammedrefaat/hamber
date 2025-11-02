@@ -41,6 +41,38 @@ definitions:
       reference_number:
         type: string
     type: object
+  controllers.CreateBannerRequest:
+    properties:
+      description:
+        type: string
+      end_date:
+        type: string
+      link:
+        type: string
+      link_text:
+        type: string
+      photo:
+        description: Base64 or URL
+        type: string
+      position:
+        description: top, middle, bottom, sidebar
+        type: string
+      priority:
+        type: integer
+      start_date:
+        type: string
+      target_roles:
+        description: JSON array
+        type: string
+      target_users:
+        description: JSON array
+        type: string
+      title:
+        type: string
+    required:
+    - photo
+    - title
+    type: object
   controllers.CreateBlogRequest:
     properties:
       content:
@@ -57,6 +89,64 @@ definitions:
     - content
     - slug
     - title
+    type: object
+  controllers.CreateEventRequest:
+    properties:
+      all_day:
+        type: boolean
+      attendees:
+        items:
+          $ref: '#/definitions/controllers.EventAttendeeInput'
+        type: array
+      color:
+        type: string
+      description:
+        type: string
+      end_time:
+        type: string
+      event_type:
+        type: string
+      is_public:
+        type: boolean
+      location:
+        type: string
+      recurrence_rule:
+        type: string
+      recurring:
+        type: boolean
+      remind_before:
+        type: integer
+      start_time:
+        type: string
+      title:
+        type: string
+    required:
+    - end_time
+    - start_time
+    - title
+    type: object
+  controllers.CreateNotificationRequest:
+    properties:
+      link:
+        example: https://hamber-hub.com/orders/123
+        type: string
+      message:
+        example: Your order has been shipped
+        type: string
+      title:
+        example: Order Update
+        type: string
+      type:
+        description: info, warning, error, success
+        example: info
+        type: string
+      user_id:
+        example: 123
+        type: integer
+    required:
+    - message
+    - title
+    - user_id
     type: object
   controllers.CreateOrderRequest:
     properties:
@@ -80,6 +170,15 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  controllers.EventAttendeeInput:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      user_id:
+        type: integer
     type: object
   controllers.LoginRequest:
     properties:
@@ -120,6 +219,22 @@ definitions:
     - password
     - subdomain
     type: object
+  controllers.SendMessageRequest:
+    properties:
+      attachments:
+        description: JSON array of file paths
+        type: string
+      body:
+        type: string
+      receiver_id:
+        type: integer
+      subject:
+        type: string
+    required:
+    - body
+    - receiver_id
+    - subject
+    type: object
   controllers.SubscribeAddonRequest:
     properties:
       addon_id:
@@ -139,6 +254,43 @@ definitions:
     - addon_id
     - payment_method
     - quantity
+    type: object
+  controllers.UpdateBlogRequest:
+    properties:
+      content:
+        type: string
+      is_published:
+        type: boolean
+      slug:
+        type: string
+      summary:
+        type: string
+      title:
+        type: string
+    type: object
+  controllers.UpdateOrderPaymentRequest:
+    properties:
+      amount:
+        example: 99.99
+        type: number
+      payment_date:
+        example: "2024-11-03T00:00:00Z"
+        type: string
+      payment_desc:
+        example: Credit card payment
+        type: string
+      payment_method:
+        example: 1
+        type: integer
+      payment_ref:
+        example: REF123456
+        type: string
+      payment_status:
+        example: paid
+        type: string
+    required:
+    - amount
+    - payment_status
     type: object
   controllers.UpdateProductRequest:
     properties:
@@ -343,6 +495,445 @@ paths:
       summary: Get add-ons list
       tags:
       - Add-ons
+  /admin/analytics:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed platform-wide analytics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Platform analytics
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get platform analytics (Admin)
+      tags:
+      - Admin Dashboard
+  /admin/banners:
+    get:
+      consumes:
+      - application/json
+      description: Get all banners including inactive
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banners list
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all banners (Admin)
+      tags:
+      - Banners
+  /admin/banners/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a banner
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banner deleted
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete banner (Admin)
+      tags:
+      - Banners
+    put:
+      consumes:
+      - application/json
+      description: Update banner details
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated banner details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateBannerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banner updated
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update banner (Admin)
+      tags:
+      - Banners
+  /admin/banners/{id}/analytics:
+    get:
+      consumes:
+      - application/json
+      description: Get analytics for a specific banner
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banner analytics
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get banner analytics (Admin)
+      tags:
+      - Banners
+  /admin/blogs:
+    get:
+      consumes:
+      - application/json
+      description: Get all blogs including unpublished - Admin only
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by author ID
+        in: query
+        name: author_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Blogs list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all blogs (Admin)
+      tags:
+      - Admin
+  /admin/blogs/analytics:
+    get:
+      consumes:
+      - application/json
+      description: Get blog statistics for admin dashboard
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Blog analytics
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get blog analytics (Admin)
+      tags:
+      - Admin
+  /admin/dashboard:
+    get:
+      consumes:
+      - application/json
+      description: Get comprehensive admin dashboard with platform-wide stats
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Admin dashboard
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get admin dashboard (Admin)
+      tags:
+      - Admin Dashboard
+  /admin/permissions:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all available permissions - Admin only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Permissions list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all permissions (Admin)
+      tags:
+      - Admin
+  /admin/revenue-breakdown:
+    get:
+      consumes:
+      - application/json
+      description: Get revenue breakdown by different categories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Revenue breakdown
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get revenue breakdown (Admin)
+      tags:
+      - Admin Dashboard
+  /admin/roles:
+    get:
+      consumes:
+      - application/json
+      description: Get list of all available roles - Admin only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Roles list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all roles (Admin)
+      tags:
+      - Admin
+  /admin/user-growth-chart:
+    get:
+      consumes:
+      - application/json
+      description: Get user registration growth over time
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User growth data
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get user growth chart (Admin)
+      tags:
+      - Admin Dashboard
+  /admin/users:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated list of all users - Admin only
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Users list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden - Admin only
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all users (Admin)
+      tags:
+      - Admin
+  /admin/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a user account - Admin only
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid user ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete user (Admin)
+      tags:
+      - Admin
+  /admin/users/{id}/roles:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a role from a user - Admin only
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role removal (role_id)
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role removed
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Remove role from user (Admin)
+      tags:
+      - Admin
+    post:
+      consumes:
+      - application/json
+      description: Assign a role to a user - Admin only
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role assignment (role_id)
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role assigned
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Assign role to user (Admin)
+      tags:
+      - Admin
   /auth/login:
     post:
       consumes:
@@ -445,6 +1036,79 @@ paths:
       summary: Register a new user
       tags:
       - Authentication
+  /banners:
+    post:
+      consumes:
+      - application/json
+      description: Create a new promotional banner
+      parameters:
+      - description: Banner details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateBannerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Banner created
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Create banner (Admin)
+      tags:
+      - Banners
+  /banners/{id}/click:
+    post:
+      consumes:
+      - application/json
+      description: Record a banner click
+      parameters:
+      - description: Banner ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Click tracked
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Track banner click
+      tags:
+      - Banners
+  /banners/active:
+    get:
+      consumes:
+      - application/json
+      description: Get all active banners for current user
+      parameters:
+      - description: Filter by position
+        in: query
+        name: position
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banners list
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get active banners
+      tags:
+      - Banners
   /blogs:
     get:
       consumes:
@@ -474,20 +1138,42 @@ paths:
       - Blogs
     post:
       consumes:
-      - application/json
-      description: Create a new blog post with photos
+      - multipart/form-data
+      description: Create a new blog post with photos in one request (multipart/form-data)
       parameters:
-      - description: Blog details
-        in: body
-        name: request
+      - description: Blog title
+        in: formData
+        name: title
         required: true
-        schema:
-          $ref: '#/definitions/controllers.CreateBlogRequest'
+        type: string
+      - description: Blog content
+        in: formData
+        name: content
+        required: true
+        type: string
+      - description: Blog summary
+        in: formData
+        name: summary
+        type: string
+      - description: Blog slug (URL-friendly)
+        in: formData
+        name: slug
+        required: true
+        type: string
+      - default: false
+        description: Publish status
+        in: formData
+        name: is_published
+        type: boolean
+      - description: Blog photos (multiple allowed)
+        in: formData
+        name: photos
+        type: file
       produces:
       - application/json
       responses:
         "201":
-          description: Blog created
+          description: Blog created with photos
           schema:
             additionalProperties: true
             type: object
@@ -496,16 +1182,275 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "409":
-          description: Slug already exists
+        "401":
+          description: Unauthorized
           schema:
             additionalProperties: true
             type: object
       security:
       - Bearer: []
-      summary: Create a new blog post
+      summary: Create blog with photos
       tags:
       - Blogs
+  /blogs/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a blog post
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Blog deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid blog ID
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Not authorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Blog not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete blog post
+      tags:
+      - Blogs
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific blog post
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Blog details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid blog ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Blog not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get blog by ID
+      tags:
+      - Blogs
+    put:
+      consumes:
+      - application/json
+      description: Update an existing blog post
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated blog details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateBlogRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Blog updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Not authorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Blog not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update blog post
+      tags:
+      - Blogs
+  /blogs/{id}/photos:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific photo from a blog post
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'Photo URL (photo_url: string)'
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Photo deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Not authorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Blog or photo not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete blog photo
+      tags:
+      - Blogs
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload photos to an existing blog post
+      parameters:
+      - description: Blog ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Blog photos (multiple allowed)
+        in: formData
+        name: photos
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Photos uploaded
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Not authorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Blog not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Upload blog photos
+      tags:
+      - Blogs
+  /calendar/attendees/{attendee_id}/response:
+    put:
+      consumes:
+      - application/json
+      description: Allows an attendee to accept, decline, or tentatively accept an
+        event invitation
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Attendee ID
+        in: path
+        name: attendee_id
+        required: true
+        type: integer
+      - description: Attendee response (accepted, declined, tentative)
+        in: body
+        name: response
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Respond to an event invitation
+      tags:
+      - Calendar
   /calendar/events:
     get:
       consumes:
@@ -540,11 +1485,643 @@ paths:
       summary: Get user events
       tags:
       - Calendar
+    post:
+      consumes:
+      - application/json
+      description: Create a new calendar event
+      parameters:
+      - description: Event details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateEventRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Event created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Create calendar event
+      tags:
+      - Calendar
+  /calendar/events/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a specific calendar event by ID
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete a calendar event
+      tags:
+      - Calendar
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single calendar event by ID
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get a specific calendar event
+      tags:
+      - Calendar
+    put:
+      consumes:
+      - application/json
+      description: Updates details of a specific calendar event by ID
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated event details
+        in: body
+        name: event
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateEventRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update an existing calendar event
+      tags:
+      - Calendar
+  /calendar/events/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Updates the status (e.g., SCHEDULED, ONGOING) of a specific calendar
+        event by ID
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Event ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Event status update
+        in: body
+        name: status
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update the status of a calendar event
+      tags:
+      - Calendar
+  /calendar/public-events:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all public events for a specific month/year
+      parameters:
+      - description: 'Year (default: current year)'
+        in: query
+        name: year
+        type: integer
+      - description: 'Month 1-12 (default: current month)'
+        in: query
+        name: month
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get public calendar events
+      tags:
+      - Calendar
+  /dashboard/client-stats:
+    get:
+      consumes:
+      - application/json
+      description: Get client analytics and statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Client statistics
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get client statistics
+      tags:
+      - Dashboard
+  /dashboard/orders-chart:
+    get:
+      consumes:
+      - application/json
+      description: Get orders data by status for charts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Orders chart data
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get orders chart data
+      tags:
+      - Dashboard
+  /dashboard/product-stats:
+    get:
+      consumes:
+      - application/json
+      description: Get detailed product statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Product statistics
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get product statistics
+      tags:
+      - Dashboard
+  /dashboard/recent-activities:
+    get:
+      consumes:
+      - application/json
+      description: Get user's recent activities/actions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Recent activities
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get recent activities
+      tags:
+      - Dashboard
+  /dashboard/recent-orders:
+    get:
+      consumes:
+      - application/json
+      description: Get last 10 orders
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Recent orders
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get recent orders
+      tags:
+      - Dashboard
+  /dashboard/revenue-chart:
+    get:
+      consumes:
+      - application/json
+      description: Get revenue data for charts (last 12 months)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Revenue chart data
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get revenue chart data
+      tags:
+      - Dashboard
+  /dashboard/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get comprehensive dashboard stats for current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dashboard statistics
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get user dashboard statistics
+      tags:
+      - Dashboard
+  /dashboard/top-products:
+    get:
+      consumes:
+      - application/json
+      description: Get top 10 best selling products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Top products
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get top selling products
+      tags:
+      - Dashboard
+  /messages/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a message (soft delete)
+      parameters:
+      - description: Message ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message deleted
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete message
+      tags:
+      - Messages
+    get:
+      consumes:
+      - application/json
+      description: Get message details by ID
+      parameters:
+      - description: Message ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message details
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get single message
+      tags:
+      - Messages
+  /messages/{id}/archive:
+    patch:
+      consumes:
+      - application/json
+      description: Move message to archive
+      parameters:
+      - description: Message ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message archived
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Archive message
+      tags:
+      - Messages
+  /messages/{id}/star:
+    patch:
+      consumes:
+      - application/json
+      description: Toggle star status on a message
+      parameters:
+      - description: Message ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Star toggled
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Star/unstar message
+      tags:
+      - Messages
+  /messages/inbox:
+    get:
+      consumes:
+      - application/json
+      description: Get all received messages
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Show only unread messages
+        in: query
+        name: unread
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Messages list
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get inbox messages
+      tags:
+      - Messages
+  /messages/send:
+    post:
+      consumes:
+      - application/json
+      description: Send a message to another user (internal email)
+      parameters:
+      - description: Message details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SendMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Message sent
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Send internal message
+      tags:
+      - Messages
+  /messages/sent:
+    get:
+      consumes:
+      - application/json
+      description: Get all messages sent by user
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Messages list
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get sent messages
+      tags:
+      - Messages
+  /messages/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get inbox statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message stats
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get message statistics
+      tags:
+      - Messages
   /notifications:
     get:
       consumes:
       - application/json
-      description: Get paginated list of user notifications
+      description: Returns a paginated list of notifications for the logged-in user
       parameters:
       - default: 1
         description: Page number
@@ -557,7 +2134,7 @@ paths:
         name: limit
         type: integer
       - default: false
-        description: Show only unread
+        description: Show only unread notifications
         in: query
         name: unread_only
         type: boolean
@@ -574,16 +2151,114 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "500":
+          description: Failed to fetch notifications
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - Bearer: []
       summary: Get user notifications
+      tags:
+      - Notifications
+    post:
+      consumes:
+      - application/json
+      description: Allows an admin to create a notification for a specific user
+      parameters:
+      - description: Notification payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateNotificationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Notification created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to create notification
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Create a new notification (Admin only)
+      tags:
+      - Notifications
+  /notifications/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a specific notification belonging to the user or admin
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notification deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid notification ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Access denied
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Notification not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to delete notification
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete a notification
       tags:
       - Notifications
   /notifications/{id}/read:
     patch:
       consumes:
       - application/json
-      description: Mark a specific notification as read
+      description: Marks a specific notification as read for the logged-in user
       parameters:
       - description: Notification ID
         in: path
@@ -598,8 +2273,28 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: Invalid notification ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Access denied
+          schema:
+            additionalProperties: true
+            type: object
         "404":
           description: Notification not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to mark as read
           schema:
             additionalProperties: true
             type: object
@@ -608,11 +2303,84 @@ paths:
       summary: Mark notification as read
       tags:
       - Notifications
+  /notifications/broadcast:
+    post:
+      consumes:
+      - application/json
+      description: Sends a notification to all users
+      parameters:
+      - description: Broadcast payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateNotificationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Broadcast sent successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to send broadcast
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Broadcast notification (Admin only)
+      tags:
+      - Notifications
+  /notifications/read-all:
+    patch:
+      consumes:
+      - application/json
+      description: Marks all notifications for the logged-in user as read
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: All notifications marked as read
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to mark notifications as read
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Mark all notifications as read
+      tags:
+      - Notifications
   /notifications/unread-count:
     get:
       consumes:
       - application/json
-      description: Get count of unread notifications for current user
+      description: Returns the number of unread notifications for the logged-in user
       produces:
       - application/json
       responses:
@@ -623,6 +2391,11 @@ paths:
             type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to get unread count
           schema:
             additionalProperties: true
             type: object
@@ -731,6 +2504,79 @@ paths:
       security:
       - Bearer: []
       summary: Get order by ID
+      tags:
+      - Orders
+  /orders/{id}/cancel:
+    patch:
+      consumes:
+      - application/json
+      description: Cancel an order
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order cancelled
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid order ID
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Cancel order
+      tags:
+      - Orders
+  /orders/{id}/payment:
+    put:
+      consumes:
+      - application/json
+      description: Updates the payment status, amount, reference, date, method, and
+        description for a specific order.
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Payment update payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateOrderPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order payment updated successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid order ID or bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Failed to update order payment
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Update order payment details
       tags:
       - Orders
   /orders/{id}/status:
@@ -853,6 +2699,29 @@ paths:
       summary: Request package change
       tags:
       - Payments
+  /permissions:
+    get:
+      consumes:
+      - application/json
+      description: Get current user's permissions from JWT context
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User permissions
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get user permissions
+      tags:
+      - User
   /products:
     get:
       consumes:
@@ -962,6 +2831,70 @@ paths:
       security:
       - Bearer: []
       summary: Update product
+      tags:
+      - Products
+  /products/{id}/quantity:
+    patch:
+      consumes:
+      - application/json
+      description: Update the quantity/stock of a product
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'Quantity update (quantity: int)'
+        in: body
+        name: request
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Quantity updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Not authorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update product quantity
+      tags:
+      - Products
+  /products/categories:
+    get:
+      consumes:
+      - application/json
+      description: Get list of product categories for the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Categories list
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get product categories
       tags:
       - Products
   /profile:
