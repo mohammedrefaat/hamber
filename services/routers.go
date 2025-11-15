@@ -28,7 +28,25 @@ func GetRouter(cfg *config.Config) (*gin.Engine, error) {
 				"message": "pong",
 			})
 		})
+		// Customer Website Routes (Public)
+		customerWebsite := router.Group("/api/customer-website")
+		{
+			// Site Configuration (Public read)
+			customerWebsite.GET("/site/:site_name", controllers.GetSiteJSON)
 
+			// Shopping Cart (Public with optional auth)
+			cart := customerWebsite.Group("/cart")
+			{
+				cart.POST("/add", controllers.AddToCart)
+				cart.GET("/", controllers.GetCart)
+				cart.PUT("/:id", controllers.UpdateCartItem)
+				cart.DELETE("/:id", controllers.RemoveFromCart)
+				cart.DELETE("/clear", controllers.ClearCart)
+			}
+
+			// Checkout (Requires Auth)
+			customerWebsite.POST("/checkout", controllers.CreateOrderFromCart) // todo
+		}
 		// Package routes (public)
 		packages := api.Group("/packages")
 		{

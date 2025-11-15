@@ -12,21 +12,29 @@ import (
 
 // ========== SITE CONFIGURATION ==========
 
-type SiteConfig struct {
-	ID        uint      `json:"id"`
-	UserID    uint      `json:"user_id"`
-	SiteName  string    `json:"site_name"`
-	SiteData  string    `json:"site_data"` // JSON string
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+type SiteConfigRequest struct {
+	SiteName string                 `json:"site_name" binding:"required" example:"my-store"`
+	SiteData map[string]interface{} `json:"site_data" binding:"required" swaggertype:"object,string" example:"{\\"theme\\":\\"dark\\",\\"logo\\":\\"https://example.com/logo.png\\"}"`
 }
 
-type SiteConfigRequest struct {
-	SiteName string                 `json:"site_name" binding:"required"`
-	SiteData map[string]interface{} `json:"site_data" binding:"required"`
+type SiteConfigResponse struct {
+	SiteName  string                 `json:"site_name" example:"my-store"`
+	SiteData  map[string]interface{} `json:"site_data" swaggertype:"object,string" example:"{\\"theme\\":\\"dark\\",\\"logo\\":\\"https://example.com/logo.png\\"}"`
+	UpdatedAt time.Time              `json:"updated_at" example:"2025-11-15T17:30:00Z"`
 }
 
 // GetSiteJSON retrieves site configuration by site name
+// @Summary Get site configuration
+// @Description Retrieves the configuration data for a specific customer website by site name
+// @Tags Customer Website
+// @Accept json
+// @Produce json
+// @Param site_name path string true "Site Name" example("my-store")
+// @Success 200 {object} SiteConfigResponse "Site configuration retrieved successfully"
+// @Failure 400 {object} map[string]string "Bad request - site_name is required"
+// @Failure 404 {object} map[string]string "Site configuration not found"
+// @Failure 500 {object} map[string]string "Failed to parse site data"
+// @Router /api/customer-website/site/{site_name} [get]
 func GetSiteJSON(c *gin.Context) {
 	siteName := c.Param("site_name")
 	if siteName == "" {
@@ -36,7 +44,7 @@ func GetSiteJSON(c *gin.Context) {
 		return
 	}
 
-	var siteConfig SiteConfig
+	var siteConfig dbmodels.SiteConfig
 	if err := globalStore.StStore.GetSiteConfig(siteName, &siteConfig); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Site configuration not found",
@@ -61,6 +69,21 @@ func GetSiteJSON(c *gin.Context) {
 }
 
 // CreateOrUpdateSiteJSON creates or updates site configuration
+// @Summary Create or update site configuration
+// @Description Creates a new site configuration or updates an existing one. Users can only update their own sites unless they are admin.
+// @Tags Customer Website
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param Authorization header string true "Bearer token" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+// @Param request body SiteConfigRequest true "Site Configuration Data"
+// @Success 200 {object} map[string]string "Site configuration updated successfully"
+// @Success 201 {object} map[string]string "Site configuration created successfully"
+// @Failure 400 {object} map[string]string "Bad request - validation error"
+// @Failure 401 {object} map[string]string "Unauthorized - missing or invalid token"
+// @Failure 403 {object} map[string]string "Forbidden - cannot update other user's site"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/admin/sites [post]
 func CreateOrUpdateSiteJSON(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -84,12 +107,12 @@ func CreateOrUpdateSiteJSON(c *gin.Context) {
 	}
 
 	// Check if site config exists
-	var existingConfig SiteConfig
+	var existingConfig dbmodels.SiteConfig
 	err = globalStore.StStore.GetSiteConfig(req.SiteName, &existingConfig)
 
 	if err != nil {
 		// Create new site config
-		siteConfig := SiteConfig{
+		siteConfig := dbmodels.SiteConfig{
 			UserID:   claims.UserID,
 			SiteName: req.SiteName,
 			SiteData: string(siteDataJSON),
@@ -133,28 +156,60 @@ func CreateOrUpdateSiteJSON(c *gin.Context) {
 
 // ========== SHOPPING CART ==========
 
-type CartItem struct {
-	ID        uint              `json:"id"`
-	UserID    *uint             `json:"user_id,omitempty"` // null for guest carts
-	SessionID string            `json:"session_id"`
-	ProductID uint              `json:"product_id"`
-	Quantity  int               `json:"quantity"`
-	Price     float64           `json:"price"`
-	CreatedAt time.Time         `json:"created_at"`
-	UpdatedAt time.Time         `json:"updated_at"`
+type CartItemResponse struct {
+	ID        uint              `json:"id" example:"1"`
+	UserID    *uint             `json:"user_id,omitempty" example:"5"`
+	SessionID string            `json:"session_id" example:"guest-session-123"`
+	ProductID uint              `json:"product_id" example:"10"`
+	Quantity  int               `json:"quantity" example:"2"`
+	Price     float64           `json:"price" example:"29.99"`
+	CreatedAt time.Time         `json:"created_at" example:"2025-11-15T17:30:00Z"`
+	UpdatedAt time.Time         `json:"updated_at" example:"2025-11-15T17:30:00Z"`
 	Product   *dbmodels.Product `json:"product,omitempty"`
 }
 
 type AddToCartRequest struct {
-	ProductID uint `json:"product_id" binding:"required"`
-	Quantity  int  `json:"quantity" binding:"required,min=1"`
+	ProductID uint `json:"product_id" binding:"required" example:"10"`
+	Quantity  int  `json:"quantity" binding:"required,min=1" example:"2"`
 }
 
 type UpdateCartRequest struct {
-	Quantity int `json:"quantity" binding:"required,min=0"`
+	Quantity int `json:"quantity" binding:"required,min=0" example:"3"`
+}
+
+type CartResponse struct {
+	CartItems []CartItemResponse `json:"cart_items"`
+	Subtotal  float64            `json:"subtotal" example:"89.97"`
+	ItemCount int                `json:"item_count" example:"3"`
+}
+
+type CheckoutRequest struct {
+	ClientID uint   `json:"client_id" binding:"required" example:"5"`
+	Address  string `json:"address" example:"123 Main St, City, Country"`
+	Phone    string `json:"phone" example:"+201234567890"`
+	Notes    string `json:"notes" example:"Please deliver between 2-5 PM"`
+}
+
+type OrderResponse struct {
+	Message string         `json:"message" example:"Order created successfully"`
+	Order   dbmodels.Order `json:"order"`
 }
 
 // AddToCart adds a product to the shopping cart
+// @Summary Add item to cart
+// @Description Adds a product to the shopping cart. For authenticated users, uses user ID. For guests, requires X-Session-ID header.
+// @Tags Shopping Cart
+// @Accept json
+// @Produce json
+// @Param Authorization header string false "Bearer token (optional for guests)" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+// @Param X-Session-ID header string false "Session ID for guest users" example("guest-session-abc123")
+// @Param request body AddToCartRequest true "Product and Quantity"
+// @Success 200 {object} map[string]interface{} "Cart updated successfully (item already existed)"
+// @Success 201 {object} map[string]interface{} "Item added to cart successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request - validation error or insufficient stock"
+// @Failure 404 {object} map[string]string "Product not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/customer-website/cart/add [post]
 func AddToCart(c *gin.Context) {
 	var req AddToCartRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -216,7 +271,7 @@ func AddToCart(c *gin.Context) {
 	}
 
 	// Add new item to cart
-	cartItem := &CartItem{
+	cartItem := &dbmodels.CartItem{
 		UserID:    userID,
 		SessionID: sessionID,
 		ProductID: req.ProductID,
@@ -241,6 +296,17 @@ func AddToCart(c *gin.Context) {
 }
 
 // GetCart retrieves the current user's cart
+// @Summary Get shopping cart
+// @Description Retrieves all items in the current user's shopping cart with calculated subtotal
+// @Tags Shopping Cart
+// @Accept json
+// @Produce json
+// @Param Authorization header string false "Bearer token (optional for guests)" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+// @Param X-Session-ID header string false "Session ID for guest users" example("guest-session-abc123")
+// @Success 200 {object} CartResponse "Cart retrieved successfully"
+// @Failure 400 {object} map[string]string "Bad request - Session ID required for guests"
+// @Failure 500 {object} map[string]string "Failed to fetch cart"
+// @Router /api/customer-website/cart [get]
 func GetCart(c *gin.Context) {
 	var userID *uint
 	claims, err := utils.GetclamsFromContext(c)
@@ -278,6 +344,20 @@ func GetCart(c *gin.Context) {
 }
 
 // UpdateCartItem updates the quantity of a cart item
+// @Summary Update cart item quantity
+// @Description Updates the quantity of a specific cart item. Setting quantity to 0 removes the item.
+// @Tags Shopping Cart
+// @Accept json
+// @Produce json
+// @Param Authorization header string false "Bearer token (optional for guests)" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+// @Param X-Session-ID header string false "Session ID for guest users" example("guest-session-abc123")
+// @Param id path int true "Cart Item ID" example(1)
+// @Param request body UpdateCartRequest true "New Quantity"
+// @Success 200 {object} map[string]interface{} "Cart updated successfully or item removed"
+// @Failure 400 {object} map[string]interface{} "Bad request - invalid ID or insufficient stock"
+// @Failure 404 {object} map[string]string "Cart item not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/customer-website/cart/{id} [put]
 func UpdateCartItem(c *gin.Context) {
 	cartItemID := c.Param("id")
 	id, err := utils.ParseUint(cartItemID)
@@ -359,6 +439,19 @@ func UpdateCartItem(c *gin.Context) {
 }
 
 // RemoveFromCart removes an item from the cart
+// @Summary Remove item from cart
+// @Description Completely removes a specific item from the shopping cart
+// @Tags Shopping Cart
+// @Accept json
+// @Produce json
+// @Param Authorization header string false "Bearer token (optional for guests)" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+// @Param X-Session-ID header string false "Session ID for guest users" example("guest-session-abc123")
+// @Param id path int true "Cart Item ID" example(1)
+// @Success 200 {object} map[string]string "Item removed from cart successfully"
+// @Failure 400 {object} map[string]string "Invalid cart item ID"
+// @Failure 404 {object} map[string]string "Cart item not found"
+// @Failure 500 {object} map[string]string "Failed to remove item from cart"
+// @Router /api/customer-website/cart/{id} [delete]
 func RemoveFromCart(c *gin.Context) {
 	cartItemID := c.Param("id")
 	id, err := utils.ParseUint(cartItemID)
@@ -399,6 +492,17 @@ func RemoveFromCart(c *gin.Context) {
 }
 
 // ClearCart removes all items from the cart
+// @Summary Clear entire cart
+// @Description Removes all items from the shopping cart
+// @Tags Shopping Cart
+// @Accept json
+// @Produce json
+// @Param Authorization header string false "Bearer token (optional for guests)" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+// @Param X-Session-ID header string false "Session ID for guest users" example("guest-session-abc123")
+// @Success 200 {object} map[string]string "Cart cleared successfully"
+// @Failure 400 {object} map[string]string "Session ID required for guest users"
+// @Failure 500 {object} map[string]string "Failed to clear cart"
+// @Router /api/customer-website/cart/clear [delete]
 func ClearCart(c *gin.Context) {
 	var userID *uint
 	claims, err := utils.GetclamsFromContext(c)
@@ -427,6 +531,20 @@ func ClearCart(c *gin.Context) {
 }
 
 // CreateOrderFromCart creates an order from the current cart
+// @Summary Checkout - Create order from cart
+// @Description Creates an order from all items in the shopping cart. Requires authentication. Automatically updates inventory and clears cart.
+// @Tags Shopping Cart
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param Authorization header string true "Bearer token" example("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+// @Param X-Session-ID header string false "Session ID (optional, used to migrate guest cart)" example("guest-session-abc123")
+// @Param request body CheckoutRequest true "Order Details"
+// @Success 201 {object} OrderResponse "Order created successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request - cart is empty or validation error"
+// @Failure 401 {object} map[string]string "Authentication required to create order"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /api/customer-website/checkout [post]
 func CreateOrderFromCart(c *gin.Context) {
 	claims, err := utils.GetclamsFromContext(c)
 	if err != nil {
@@ -453,12 +571,7 @@ func CreateOrderFromCart(c *gin.Context) {
 	}
 
 	// Get client ID from request
-	var req struct {
-		ClientID uint   `json:"client_id" binding:"required"`
-		Address  string `json:"address"`
-		Phone    string `json:"phone"`
-		Notes    string `json:"notes"`
-	}
+	var req CheckoutRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

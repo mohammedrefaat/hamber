@@ -301,5 +301,7 @@ func GetMod() []interface{} {
 		&Banner{},
 		&BannerView{},
 		&BannerClick{},
+		&SiteConfig{},
+		&CartItem{},
 	}
 }
